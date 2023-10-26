@@ -15,23 +15,15 @@ use winit::event::VirtualKeyCode;
 use crate::types::GameDiff;
 use crate::types::GameState;
 use crate::types::Player;
+use crate::types::PlayerState;
 use crate::types::Structure;
 
-#[derive(Default)]
-struct PlayerState {
-    forward: bool,
-    backward: bool,
-    left: bool,
-    right: bool,
-    primary: bool,
-    secondary: bool,
-    third: bool,
-}
-
+#[derive(Default, Clone)]
 pub struct Game {
     game_state: GameState,
     strctures: Vec<Structure>,
     player: Player,
+    other_players: Vec<Player>,
     speed: f32,
     state: PlayerState,
     last_update: u64,
@@ -47,18 +39,17 @@ impl Game {
                 position: Vector3::new(0.0, 0.0, 0.0),
                 rotation: Quaternion::new(0.0, 0.0, 0.0, 0.0)
             },
+            other_players: Vec::new(),
             state: PlayerState::default(),
             last_update: time,
         }
     }
 
-    pub fn diff(&self, other: &Game) -> GameDiff {
-        GameDiff {
-
-        }
+    pub fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {
+        
     }
 
-    pub fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {
+    pub fn add_player() {
         
     }
 
@@ -117,5 +108,11 @@ impl Game {
         self.player.position += direction * self.speed * (delta as f32 / 1000.0);
 
         println!("{:?}", self.player.position);
+    }
+
+    pub fn diff(&self, other: &Game) -> GameDiff {
+        GameDiff {
+
+        }
     }
 }

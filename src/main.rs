@@ -13,6 +13,7 @@ use winit::window::WindowBuilder;
 mod renderer;
 mod game;
 mod types;
+mod game_tests;
 
 #[tokio::main]
 async fn main() {
