@@ -1,6 +1,10 @@
+use std::iter;
+
 use winit::window::Window;
 
 use crate::game::Game;
+use crate::types::SerializedGame;
+use crate::types::ShapeDesc;
 use crate::types::Vertex;
 
 #[repr(C)]
@@ -49,7 +53,7 @@ impl InstanceRaw {
 }
 
 pub struct Renderer {
-    prev_game: Option<Game>,
+    prev_state: Option<SerializedGame>,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -57,6 +61,9 @@ pub struct Renderer {
     pub size: winit::dpi::PhysicalSize<u32>,
     config: wgpu::SurfaceConfiguration,
     render_pipeline: wgpu::RenderPipeline,
+    index_buffer: wgpu::Buffer,
+    vertex_buffer: wgpu::Buffer,
+    shapes: Vec<ShapeDesc>
 }
 
 impl Renderer {
@@ -133,7 +140,7 @@ impl Renderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[InstanceRaw::desc(), Vertex::desc()],
+                buffers: &[Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -171,8 +178,26 @@ impl Renderer {
             multiview: None,
         });
 
+        let index_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Index Buffer"),
+            // The usage tells wgpu how we intend to use the buffer. This will
+            // allow the GPU to optimize the memory.
+            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+            // The size of the buffer in bytes.
+            size: 1024,
+            // We will use this later
+            mapped_at_creation: false,
+        });
+
+        let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Vertex Buffer"),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            size: 1024,
+            mapped_at_creation: false,
+        });
+
         Self {
-            prev_game: None,
+            prev_state: None,
             surface,
             device,
             queue,
@@ -180,6 +205,9 @@ impl Renderer {
             size,
             config,
             render_pipeline,
+            index_buffer,
+            vertex_buffer,
+            shapes: Vec::new()
         }
     }
 
@@ -198,13 +226,14 @@ impl Renderer {
         }
     }
 
-    pub fn update(&mut self, game: &Game) {
-        // let diff = match &self.prev_game {
-        //     Some(prev) => game.diff(prev),
-        //     None => GameDiff::new()
-        // };
-
-        // self.prev_game = Some(game.clone());
+    pub fn update(&mut self, state: SerializedGame) {
+        let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
+        println!("Index buffer slice: {:?}", index_buffer_slice.len());
+        let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
+        println!("Vertex buffer slice: {:?}", vertex_buffer_slice.len());
+        self.queue.write_buffer(&self.index_buffer, 0, index_buffer_slice);
+        self.queue.write_buffer(&self.vertex_buffer, 0, vertex_buffer_slice);
+        self.shapes = state.shapes;
     }
 
     pub fn render(&self) -> Result<(), wgpu::SurfaceError> {
@@ -227,7 +256,7 @@ impl Renderer {
                     resolve_target: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color {
-                            r: 1.0,
+                            r: 0.5,
                             g: 1.0,
                             b: 1.0,
                             a: 1.0,
@@ -240,8 +269,22 @@ impl Renderer {
 
             render_pass.set_pipeline(&self.render_pipeline);
 
-            
+            for shape in &self.shapes {
+                let index_start = shape.index_buffer_index as u64;
+                let index_end = shape.index_buffer_index as u64 + shape.index_buffer_len as u64;
+                let vertex_start = shape.vertex_buffer_index as u64;
+                let vertex_end = shape.vertex_buffer_index as u64 + shape.vertex_buffer_len as u64;
+                log::info!("Drawing index: {}..{} vertex: {}..{}", index_start, index_end, vertex_start, vertex_end);
+                render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(vertex_start..vertex_end));
+                render_pass.set_index_buffer(self.index_buffer.slice(vertex_start..vertex_end), wgpu::IndexFormat::Uint16);
+                // render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+                // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                render_pass.draw_indexed(0..shape.index_buffer_len as u32, 0, 0..1);
+            }
         }
+
+        self.queue.submit(iter::once(encoder.finish()));
+        output.present();
 
         Ok(())
 

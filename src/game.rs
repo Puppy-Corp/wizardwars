@@ -12,11 +12,13 @@ use winit::event::ScanCode;
 use winit::event::TouchPhase;
 use winit::event::VirtualKeyCode;
 
-use crate::types::GameDiff;
 use crate::types::GameState;
 use crate::types::Player;
 use crate::types::PlayerState;
+use crate::types::SerializedGame;
+use crate::types::ShapeDesc;
 use crate::types::Structure;
+use crate::types::Vertex;
 
 #[derive(Default, Clone)]
 pub struct Game {
@@ -110,9 +112,37 @@ impl Game {
         println!("{:?}", self.player.position);
     }
 
-    pub fn diff(&self, other: &Game) -> GameDiff {
-        GameDiff {
-
+    pub fn serialize(&self) -> SerializedGame {
+        let index_buffer = vec![0, 1, 4, 1, 2, 4, 2, 3, 4, /* padding */ 0];
+        let vertex_buffer = vec![
+            Vertex {
+                pos: [-0.0868241, 0.49240386, 0.0]
+            }, // A
+            Vertex {
+                pos: [-0.49513406, 0.06958647, 0.0]
+            }, // B
+            Vertex {
+                pos: [-0.21918549, -0.44939706, 0.0]
+            }, // C
+            Vertex {
+                pos: [0.35966998, -0.3473291, 0.0]
+            }, // D
+            Vertex {
+                pos: [0.44147372, 0.2347359, 0.0]
+            }, // E
+        ];
+        let desc = ShapeDesc {
+            index_buffer_index: 0,
+            vertex_buffer_index: 0,
+            index_buffer_len: index_buffer.len() * std::mem::size_of::<u16>(),
+            vertex_buffer_len: vertex_buffer.len() * std::mem::size_of::<Vertex>(),
+        };
+        SerializedGame {
+            index_buffer: index_buffer,
+            vertex_buffer: vertex_buffer,
+            shapes: vec![
+                desc
+            ]
         }
     }
 }

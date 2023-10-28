@@ -1,9 +1,18 @@
 use cgmath::Quaternion;
 use cgmath::Vector3;
 
+#[derive(Debug)]
+pub struct ShapeDesc {
+    pub index_buffer_index: usize,
+    pub vertex_buffer_index: usize,
+    pub index_buffer_len: usize,
+    pub vertex_buffer_len: usize,
+}
 
-pub struct GameDiff {
-
+pub struct SerializedGame {
+    pub index_buffer: Vec<u16>,
+    pub vertex_buffer: Vec<Vertex>,
+    pub shapes: Vec<ShapeDesc>,
 }
 
 #[repr(C)]

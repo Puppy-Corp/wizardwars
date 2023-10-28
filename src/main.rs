@@ -76,7 +76,7 @@ async fn main() {
             }
             Event::RedrawRequested(_) => {
                 game.update(time.elapsed().as_millis() as u64);
-                renderer.update(&game);
+                renderer.update(game.serialize());
 
                 // renderer.render();
                 match renderer.render() {
