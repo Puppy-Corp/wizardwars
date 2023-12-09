@@ -1,8 +1,6 @@
 use std::iter;
-
 use winit::window::Window;
-
-use crate::game::Game;
+use crate::camera::CameraUniform;
 use crate::types::SerializedGame;
 use crate::types::ShapeDesc;
 use crate::types::Vertex;
@@ -63,6 +61,9 @@ pub struct Renderer {
     render_pipeline: wgpu::RenderPipeline,
     index_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
+    instance_buffer: wgpu::Buffer,
+    camera_buffer: wgpu::Buffer,
+    camera_bind_group: wgpu::BindGroup,
     shapes: Vec<ShapeDesc>
 }
 
@@ -127,10 +128,38 @@ impl Renderer {
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
         });
 
-        let render_pipeline_layout =
-        device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        let camera_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Camera Buffer"),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            size: std::mem::size_of::<CameraUniform>() as u64,
+            mapped_at_creation: false,
+        });
+
+        let camera_bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("Camera Bind Group Layout"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::VERTEX,
+                ty: wgpu::BindingType::Buffer { 
+                    ty: wgpu::BufferBindingType::Uniform, 
+                    has_dynamic_offset: false, 
+                    min_binding_size: None
+                },
+                count: None,
+            }],
+        });
+        let camera_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Camera Bind Group"),
+            layout: &camera_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+        });
+
+        let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[],
+            bind_group_layouts: &[&camera_bind_group_layout],
             push_constant_ranges: &[],
         });
 
@@ -140,7 +169,7 @@ impl Renderer {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[Vertex::desc()],
+                buffers: &[Vertex::desc(), InstanceRaw::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -196,6 +225,13 @@ impl Renderer {
             mapped_at_creation: false,
         });
 
+        let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Instance Buffer"),
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            size: 1024,
+            mapped_at_creation: false,
+        });
+
         Self {
             prev_state: None,
             surface,
@@ -207,6 +243,9 @@ impl Renderer {
             render_pipeline,
             index_buffer,
             vertex_buffer,
+            instance_buffer,
+            camera_buffer,
+            camera_bind_group,
             shapes: Vec::new()
         }
     }
@@ -228,11 +267,14 @@ impl Renderer {
 
     pub fn update(&mut self, state: SerializedGame) {
         let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
-        println!("Index buffer slice: {:?}", index_buffer_slice.len());
         let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
-        println!("Vertex buffer slice: {:?}", vertex_buffer_slice.len());
+        let vertex_sbuffer_slice = bytemuck::cast_slice(&state.instance_buffer);
+        let camera_uniform = &[state.camera_uniform];
+        let came_uniform_slice = bytemuck::cast_slice(camera_uniform);
         self.queue.write_buffer(&self.index_buffer, 0, index_buffer_slice);
         self.queue.write_buffer(&self.vertex_buffer, 0, vertex_buffer_slice);
+        self.queue.write_buffer(&self.instance_buffer, 0, vertex_sbuffer_slice);
+        self.queue.write_buffer(&self.camera_buffer, 0, came_uniform_slice);
         self.shapes = state.shapes;
     }
 
@@ -268,18 +310,20 @@ impl Renderer {
             });
 
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
 
             for shape in &self.shapes {
                 let index_start = shape.index_buffer_index as u64;
                 let index_end = shape.index_buffer_index as u64 + shape.index_buffer_len as u64;
                 let vertex_start = shape.vertex_buffer_index as u64;
                 let vertex_end = shape.vertex_buffer_index as u64 + shape.vertex_buffer_len as u64;
-                log::info!("Drawing index: {}..{} vertex: {}..{}", index_start, index_end, vertex_start, vertex_end);
+                let instance_start = shape.instance_buffer_index as u32;
+                let instance_end = shape.instance_buffer_index as u32 + shape.instance_buffer_len as u32;
+                log::info!("Drawing index: {}..{} vertex: {}..{}", index_start, index_end, vertex_start, vertex_end); 
                 render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(vertex_start..vertex_end));
+                render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
                 render_pass.set_index_buffer(self.index_buffer.slice(vertex_start..vertex_end), wgpu::IndexFormat::Uint16);
-                // render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-                // render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                render_pass.draw_indexed(0..shape.index_buffer_len as u32, 0, 0..1);
+                render_pass.draw_indexed(0..shape.index_buffer_len as u32, 0, instance_start..instance_end);
             }
         }
 

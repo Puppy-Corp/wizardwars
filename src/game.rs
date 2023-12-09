@@ -12,6 +12,10 @@ use winit::event::ScanCode;
 use winit::event::TouchPhase;
 use winit::event::VirtualKeyCode;
 
+use crate::camera::Camera;
+use crate::camera::CameraUniform;
+use crate::instance::Instance;
+use crate::matrix::Matrix4x4;
 use crate::types::GameState;
 use crate::types::Player;
 use crate::types::PlayerState;
@@ -25,6 +29,7 @@ pub struct Game {
     game_state: GameState,
     strctures: Vec<Structure>,
     player: Player,
+    camera: Camera,
     other_players: Vec<Player>,
     speed: f32,
     state: PlayerState,
@@ -36,11 +41,12 @@ impl Game {
         Self {
             game_state: GameState::Lobby,
             strctures: Vec::new(),
-            speed: 300.0,
+            speed: 1.0,
             player: Player {
                 position: Vector3::new(0.0, 0.0, 0.0),
                 rotation: Quaternion::new(0.0, 0.0, 0.0, 0.0)
             },
+            camera: Camera::new(),
             other_players: Vec::new(),
             state: PlayerState::default(),
             last_update: time,
@@ -131,18 +137,28 @@ impl Game {
                 pos: [0.44147372, 0.2347359, 0.0]
             }, // E
         ];
+        // let instance1 = Instance::from_location(&[-5.0, 0.0, 0.0]).scale(&[0.5, 0.5, 0.5]);
+        // let instance2 = Instance::from_location(&[5.0, 0.0, 0.0]).scale(&[0.5, 0.5, 0.5]);
+        let instance1 = Instance::new(Matrix4x4::from_translation(&[self.player.position.x, self.player.position.y, self.player.position.z]));
+        // let instance2 = Instance::identity().scale(&[0.5, 0.5, 0.5]).translate(&[0.0, 5.0, 0.0]);
         let desc = ShapeDesc {
             index_buffer_index: 0,
             vertex_buffer_index: 0,
             index_buffer_len: index_buffer.len() * std::mem::size_of::<u16>(),
             vertex_buffer_len: vertex_buffer.len() * std::mem::size_of::<Vertex>(),
+            instance_buffer_index: 0,
+            instance_buffer_len: 2,
         };
         SerializedGame {
             index_buffer: index_buffer,
             vertex_buffer: vertex_buffer,
             shapes: vec![
                 desc
-            ]
+            ],
+            instance_buffer: vec![
+                instance1,
+            ],
+            camera_uniform: CameraUniform::from_camera(self.camera.clone()),
         }
     }
 }

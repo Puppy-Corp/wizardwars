@@ -1,18 +1,25 @@
 use cgmath::Quaternion;
 use cgmath::Vector3;
 
+use crate::camera::CameraUniform;
+use crate::instance::Instance;
+
 #[derive(Debug)]
 pub struct ShapeDesc {
     pub index_buffer_index: usize,
     pub vertex_buffer_index: usize,
     pub index_buffer_len: usize,
     pub vertex_buffer_len: usize,
+    pub instance_buffer_index: usize,
+    pub instance_buffer_len: usize,
 }
 
 pub struct SerializedGame {
     pub index_buffer: Vec<u16>,
     pub vertex_buffer: Vec<Vertex>,
+    pub instance_buffer: Vec<Instance>,
     pub shapes: Vec<ShapeDesc>,
+    pub camera_uniform: CameraUniform,
 }
 
 #[repr(C)]

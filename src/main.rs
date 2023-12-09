@@ -14,6 +14,9 @@ mod renderer;
 mod game;
 mod types;
 mod game_tests;
+mod instance;
+mod matrix;
+mod camera;
 
 #[tokio::main]
 async fn main() {
