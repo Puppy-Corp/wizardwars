@@ -1,5 +1,6 @@
 use std::iter;
 use winit::window::Window;
+use crate::camera::Camera;
 use crate::camera::CameraUniform;
 use crate::types::SerializedGame;
 use crate::types::ShapeDesc;
@@ -64,7 +65,8 @@ pub struct Renderer {
     instance_buffer: wgpu::Buffer,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
-    shapes: Vec<ShapeDesc>
+    shapes: Vec<ShapeDesc>,
+    camera: Camera
 }
 
 impl Renderer {
@@ -187,7 +189,7 @@ impl Renderer {
                 topology: wgpu::PrimitiveTopology::TriangleList,
                 strip_index_format: None,
                 front_face: wgpu::FrontFace::Ccw,
-                cull_mode: Some(wgpu::Face::Back),
+                cull_mode: None,
                 // Setting this to anything other than Fill requires Features::POLYGON_MODE_LINE
                 // or Features::POLYGON_MODE_POINT
                 polygon_mode: wgpu::PolygonMode::Fill,
@@ -246,7 +248,8 @@ impl Renderer {
             instance_buffer,
             camera_buffer,
             camera_bind_group,
-            shapes: Vec::new()
+            shapes: Vec::new(),
+            camera: Camera::new(),
         }
     }
 
@@ -260,8 +263,7 @@ impl Renderer {
             self.config.width = new_size.width;
             self.config.height = new_size.height;
             self.surface.configure(&self.device, &self.config);
-
-            // self.camera.aspect = self.config.width as f32 / self.config.height as f32;
+            self.camera.update_aspect(self.config.width as f32 / self.config.height as f32);
         }
     }
 
@@ -269,7 +271,9 @@ impl Renderer {
         let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
         let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
         let vertex_sbuffer_slice = bytemuck::cast_slice(&state.instance_buffer);
-        let camera_uniform = &[state.camera_uniform];
+        self.camera.update_pos(&state.camera);
+        let uniform = self.camera.build_uniform();
+        let camera_uniform = &[uniform];
         let came_uniform_slice = bytemuck::cast_slice(camera_uniform);
         self.queue.write_buffer(&self.index_buffer, 0, index_buffer_slice);
         self.queue.write_buffer(&self.vertex_buffer, 0, vertex_buffer_slice);
@@ -319,7 +323,6 @@ impl Renderer {
                 let vertex_end = shape.vertex_buffer_index as u64 + shape.vertex_buffer_len as u64;
                 let instance_start = shape.instance_buffer_index as u32;
                 let instance_end = shape.instance_buffer_index as u32 + shape.instance_buffer_len as u32;
-                log::info!("Drawing index: {}..{} vertex: {}..{}", index_start, index_end, vertex_start, vertex_end); 
                 render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(vertex_start..vertex_end));
                 render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
                 render_pass.set_index_buffer(self.index_buffer.slice(vertex_start..vertex_end), wgpu::IndexFormat::Uint16);

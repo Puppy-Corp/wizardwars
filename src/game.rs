@@ -1,27 +1,21 @@
-use std::time::Instant;
-
 use cgmath::InnerSpace;
 use cgmath::Quaternion;
 use cgmath::Vector3;
-use winit::dpi::PhysicalPosition;
 use winit::event::ElementState;
 use winit::event::KeyboardInput;
 use winit::event::MouseButton;
 use winit::event::MouseScrollDelta;
-use winit::event::ScanCode;
 use winit::event::TouchPhase;
 use winit::event::VirtualKeyCode;
-
-use crate::camera::Camera;
-use crate::camera::CameraUniform;
+use crate::camera::CameraPos;
 use crate::instance::Instance;
 use crate::matrix::Matrix4x4;
+use crate::structure::Structure;
 use crate::types::GameState;
 use crate::types::Player;
 use crate::types::PlayerState;
 use crate::types::SerializedGame;
 use crate::types::ShapeDesc;
-use crate::types::Structure;
 use crate::types::Vertex;
 
 #[derive(Default, Clone)]
@@ -29,32 +23,38 @@ pub struct Game {
     game_state: GameState,
     strctures: Vec<Structure>,
     player: Player,
-    camera: Camera,
+    camera: CameraPos,
     other_players: Vec<Player>,
     speed: f32,
     state: PlayerState,
     last_update: u64,
+    mouse_sensitivity: f32,
 }
 
 impl Game {
     pub fn new(time: u64) -> Self {
+
+
         Self {
             game_state: GameState::Lobby,
             strctures: Vec::new(),
-            speed: 1.0,
+            speed: 5.0,
             player: Player {
                 position: Vector3::new(0.0, 0.0, 0.0),
                 rotation: Quaternion::new(0.0, 0.0, 0.0, 0.0)
             },
-            camera: Camera::new(),
+            camera: CameraPos::new(),
             other_players: Vec::new(),
             state: PlayerState::default(),
             last_update: time,
+            mouse_sensitivity: 0.1,
         }
     }
 
-    pub fn handle_cursor_moved(&mut self, position: PhysicalPosition<f64>) {
-        
+    pub fn handle_cursor_moved(&mut self, dx: f32, dy: f32) {
+        let delta_x = dx * self.mouse_sensitivity;
+        let delta_y = dy * self.mouse_sensitivity;
+        self.camera.rotate(delta_x, delta_y);
     }
 
     pub fn add_player() {
@@ -92,15 +92,15 @@ impl Game {
     }
 
     pub fn update(&mut self, time: u64) {
-        let delta = time - self.last_update;
+        let time_delta = time - self.last_update;
         self.last_update = time;
 
         let mut direction = Vector3::new(0.0, 0.0, 0.0);
         if self.state.forward {
-            direction += Vector3::new(0.0, 0.0, -1.0);
+            direction += Vector3::new(0.0, 0.0, 1.0);
         }
         if self.state.backward {
-            direction += Vector3::new(0.0, 0.0, 1.0);
+            direction += Vector3::new(0.0, 0.0, -1.0);
         }
         if self.state.left {
             direction += Vector3::new(-1.0, 0.0, 0.0);
@@ -113,9 +113,8 @@ impl Game {
             direction = direction.normalize();
         }
 
-        self.player.position += direction * self.speed * (delta as f32 / 1000.0);
-
-        println!("{:?}", self.player.position);
+        direction = direction * self.speed * (time_delta as f32 / 1000.0);
+        self.camera.move_eye(direction);
     }
 
     pub fn serialize(&self) -> SerializedGame {
@@ -158,7 +157,7 @@ impl Game {
             instance_buffer: vec![
                 instance1,
             ],
-            camera_uniform: CameraUniform::from_camera(self.camera.clone()),
+            camera: self.camera.clone(),
         }
     }
 }

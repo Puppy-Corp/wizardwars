@@ -1,7 +1,6 @@
 use cgmath::Quaternion;
 use cgmath::Vector3;
-
-use crate::camera::CameraUniform;
+use crate::camera::CameraPos;
 use crate::instance::Instance;
 
 #[derive(Debug)]
@@ -19,7 +18,7 @@ pub struct SerializedGame {
     pub vertex_buffer: Vec<Vertex>,
     pub instance_buffer: Vec<Instance>,
     pub shapes: Vec<ShapeDesc>,
-    pub camera_uniform: CameraUniform,
+    pub camera: CameraPos
 }
 
 #[repr(C)]
@@ -29,6 +28,12 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    pub fn new(pos: [f32; 3]) -> Self {
+        Self {
+            pos
+        }
+    }
+
     pub fn desc() -> wgpu::VertexBufferLayout<'static> {
         use std::mem;
         wgpu::VertexBufferLayout {
@@ -63,10 +68,6 @@ impl Default for GameState {
     }
 }
 
-pub enum Shape {
-
-}
-
 #[derive(Clone)]
 pub struct Triangle {
     pub a_len: f32,
@@ -81,10 +82,9 @@ pub struct Triangle {
     pub position: Vector3<f32>,
 }
 
-#[derive(Clone)]
-pub struct Structure {
-    pub triangles: Vec<Triangle>,
-    pub position: Vector3<f32>,
+pub struct Shape {
+    pub vertexes: Vec<Vertex>,
+    pub indexes: Vec<u16>,
 }
 
 #[derive(Clone)]
