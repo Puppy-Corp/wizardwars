@@ -25,8 +25,8 @@ impl Default for CameraPos {
 impl CameraPos {
     pub fn new() -> Self {
         Self {
-            eye: (0.0, 5.0, 10.0).into(),
-            target: (0.0, 0.0, 0.0).into(),
+            eye: (0.0, 0.0, 0.0).into(),
+            target: (1.0, 0.0, 0.0).into(),
         }
     }
 

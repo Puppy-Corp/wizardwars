@@ -2,7 +2,7 @@ use crate::matrix::Matrix4x4;
 
 
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Debug, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Instance {
     model: Matrix4x4,
 }
@@ -14,11 +14,3 @@ impl Instance {
         }
     }
 }
-
-
-// /**
-//  * [[1, 1, 1]
-//  * [1, 1, 1]
-//  * [1, 1, 1]]
-//  * 
-//  */

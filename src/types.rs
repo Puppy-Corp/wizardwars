@@ -13,6 +13,7 @@ pub struct ShapeDesc {
     pub instance_buffer_len: usize,
 }
 
+#[derive(Debug)]
 pub struct SerializedGame {
     pub index_buffer: Vec<u16>,
     pub vertex_buffer: Vec<Vertex>,

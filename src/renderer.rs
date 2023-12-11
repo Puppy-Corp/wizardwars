@@ -270,14 +270,14 @@ impl Renderer {
     pub fn update(&mut self, state: SerializedGame) {
         let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
         let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
-        let vertex_sbuffer_slice = bytemuck::cast_slice(&state.instance_buffer);
+        let instance_buffer_slice = bytemuck::cast_slice(&state.instance_buffer);
         self.camera.update_pos(&state.camera);
         let uniform = self.camera.build_uniform();
         let camera_uniform = &[uniform];
         let came_uniform_slice = bytemuck::cast_slice(camera_uniform);
         self.queue.write_buffer(&self.index_buffer, 0, index_buffer_slice);
         self.queue.write_buffer(&self.vertex_buffer, 0, vertex_buffer_slice);
-        self.queue.write_buffer(&self.instance_buffer, 0, vertex_sbuffer_slice);
+        self.queue.write_buffer(&self.instance_buffer, 0, instance_buffer_slice);
         self.queue.write_buffer(&self.camera_buffer, 0, came_uniform_slice);
         self.shapes = state.shapes;
     }
@@ -325,8 +325,8 @@ impl Renderer {
                 let instance_end = shape.instance_buffer_index as u32 + shape.instance_buffer_len as u32;
                 render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(vertex_start..vertex_end));
                 render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
-                render_pass.set_index_buffer(self.index_buffer.slice(vertex_start..vertex_end), wgpu::IndexFormat::Uint16);
-                render_pass.draw_indexed(0..shape.index_buffer_len as u32, 0, instance_start..instance_end);
+                render_pass.set_index_buffer(self.index_buffer.slice(index_start..index_end), wgpu::IndexFormat::Uint16);
+                render_pass.draw_indexed(0..(shape.index_buffer_len / 2) as u32, 0, instance_start..instance_end);
             }
         }
 

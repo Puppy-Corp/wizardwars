@@ -1,6 +1,6 @@
 
 #[repr(C)]
-#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+#[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Matrix4x4 {
     pub data: [[f32; 4]; 4],
 }

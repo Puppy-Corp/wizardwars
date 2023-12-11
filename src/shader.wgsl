@@ -51,7 +51,7 @@ fn vs_main(
         instance.model_matrix_3,
     );
     var out: VertexOutput;
-    out.color = model.color;
+    out.color = vec3(1.0, 0.0, 0.0);
     //out.clip_position = vec4<f32>(model.position, 1.0);
     out.clip_position = camera.view_proj * model_matrix * vec4<f32>(model.position, 1.0);
     return out;
