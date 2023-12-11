@@ -14,3 +14,5 @@ bytemuck = { version = "1",  features = [ "derive" ] }
 log = "0.4"
 cgmath = "0.18"
 simple_logger = "4"
+gltf = "1"
+clap = { version = "4", features = ["derive"] }

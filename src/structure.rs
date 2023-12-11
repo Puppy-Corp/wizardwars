@@ -1,7 +1,7 @@
 use cgmath::Quaternion;
 use crate::types::Vertex;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Structure {
     pub vertexes: Vec<Vertex>,
     pub indexes: Vec<u16>,
