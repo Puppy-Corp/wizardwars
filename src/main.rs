@@ -24,7 +24,7 @@ mod instance;
 mod matrix;
 mod camera;
 mod structure;
-mod model;
+mod gltf;
 mod args;
 mod engine;
 
