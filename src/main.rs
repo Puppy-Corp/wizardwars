@@ -62,8 +62,8 @@ async fn main() {
 
     match command {
         Command::Inspect { path } => {
-            let structure = model::load_glb(path).await;
-            println!("{:?}", structure);
+            // let structure = gltf::load_glb(path).await;
+            // println!("{:?}", structure);
         }
     }
 }
