@@ -4,6 +4,8 @@ use std::path::Path;
 use serde::Deserialize;
 use serde::Serialize;
 
+use crate::byte_eater::ByteEater;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Asset {
     pub generator: String,
@@ -50,13 +52,14 @@ pub struct Atributes {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Primitive {
     pub attributes: Atributes,
-    pub indices: usize,
+    pub indices: Option<usize>,
     pub material: usize,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Mesh {
-    pub name: String,
+    pub name: Option<String>,
+	// TODO: weights
     pub primitives: Vec<Primitive>,
 }
 
@@ -69,7 +72,7 @@ pub struct Acessor {
     pub min: Option<Vec<f32>>,
     pub max: Option<Vec<f32>>,
     #[serde(rename = "type")]
-    pub ty: String,
+    pub ty: AccessorType,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,38 +104,153 @@ pub struct GLTFHeader {
 
 static MAGIC: [u8; 4] = [b'g', b'l', b'T', b'F'];
 static JSON: u32 = 0x4E4F534A; // "JSON"
+static BIN: u32 = 0x004E4942; // "BIN"
 
-pub fn parse_glb<P: AsRef<Path>>(path: P) {
+enum ComponentType {
+	SignedByte,		// 8 bits
+	UnsignedByte,   // 8 bits
+	Short,		    // 16 bits
+	UnsignedShort,  // 16 bits
+	UnsignedInt,    // 32 bits
+	Float,		    // 32 bits
+}
+
+impl From<u32> for ComponentType {
+	fn from(value: u32) -> Self {
+		match value {
+			5120 => ComponentType::SignedByte,
+			5121 => ComponentType::UnsignedByte,
+			5122 => ComponentType::Short,
+			5123 => ComponentType::UnsignedShort,
+			5125 => ComponentType::UnsignedInt,
+			5126 => ComponentType::Float,
+			_ => panic!("Invalid component type")
+		}
+	}
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+enum AccessorType {
+	#[serde(rename = "SCALAR")]
+	Scalar,
+	#[serde(rename = "VEC2")]
+	Vec2,
+	#[serde(rename = "VEC3")]
+	Vec3,
+	#[serde(rename = "VEC4")]
+	Vec4,
+	#[serde(rename = "MAT2")]
+	Mat2,
+	#[serde(rename = "MAT3")]
+	Mat3,
+	#[serde(rename = "MAT4")]
+	Mat4
+}
+
+impl From<&str> for AccessorType {
+	fn from(value: &str) -> Self {
+		match value {
+			"SCALAR" => AccessorType::Scalar,
+			"VEC2" => AccessorType::Vec2,
+			"VEC3" => AccessorType::Vec3,
+			"VEC4" => AccessorType::Vec4,
+			"MAT2" => AccessorType::Mat2,
+			"MAT3" => AccessorType::Mat3,
+			"MAT4" => AccessorType::Mat4,
+			_ => panic!("Invalid accessor type")
+		}
+	}
+}
+
+pub struct ParseResult {
+	pub header: GLTFHeader,
+	pub binary: Vec<u8>,
+}
+
+pub fn parse_glb<P: AsRef<Path>>(path: P) -> ParseResult {
     let data = fs::read(path).unwrap();
 
     if data.len() < 12 {
         panic!("Invalid glTF file");
     }
 
-    if data[0..4] != MAGIC {
+	let mut byte_eater = ByteEater::new(&data);
+
+    if byte_eater.read_bytes(4) != MAGIC {
         panic!("Invalid glTF file");
     }
 
-    if data[16..20] != JSON.to_le_bytes() {
+	byte_eater.set_index(12);
+
+	let json_length = byte_eater.read_u32() as usize;
+	println!("json length: {}", json_length);
+
+    if byte_eater.read_bytes(4) != JSON.to_le_bytes() {
         panic!("Invalid glTF file");
     }
 
-    let length = u32::from_le_bytes([data[12], data[13], data[14], data[15]]) as usize;
+	byte_eater.set_index(20);
+	let json = String::from_utf8(byte_eater.read_bytes(json_length).to_vec()).unwrap();
+    let header: GLTFHeader = serde_json::from_str(&json).unwrap();
 
-    let json = String::from_utf8(data[20..20+length].to_vec()).unwrap();
-    let json: GLTFHeader = serde_json::from_str(&json).unwrap();
+	println!("json: {:#?}", header);
 
+	println!("currentInx {}", byte_eater.index());
 
-    println!("length: {}", length);
-    println!("json: {:?}", json);
+	let bin_length = byte_eater.read_u32() as usize;
+
+	println!("bin length: {}", bin_length);
+
+	println!("currentInx {}", byte_eater.index());
+
+	let byts = byte_eater.read_bytes(4);
+	println!("byts: {:X?}", byts);
+
+	if byts != BIN.to_le_bytes() {
+		panic!("Invalid glTF file");
+	}
+	
+	let binary = byte_eater.read_bytes(bin_length);
+
+	println!("jsong length: {}", json_length);
+	println!("json: {:#?}", header);
+	// println!("binary length: {}", bin_length);
+	// println!("binary: {:X?}", binary);
+
+	ParseResult {
+		header,
+		binary: binary.to_vec(),
+	}
 }
 
 #[cfg(test)]
 mod tests {
+    use gltf::buffer;
+
     use super::parse_glb;
 
     #[test]
     fn test_parse_box() {
-        parse_glb("./models/box.glb")
-    }
+        let result = parse_glb("./models/box.glb");
+    
+		for node in result.header.nodes.iter() {
+			println!("node: {:#?}", node);
+
+			let mesh = &result.header.meshes[node.mesh];
+
+			for primitive in mesh.primitives.iter() {
+				println!("primitive: {:#?}", primitive);
+				let accessor = &result.header.accessors[primitive.attributes.position];
+				println!("accessor: {:#?}", accessor);
+
+				let buffer_view = &result.header.buffer_views[accessor.buffer_view];
+				println!("buffer_view: {:#?}", buffer_view);
+
+				let buffer = &result.binary[buffer_view.byte_offset..buffer_view.byte_offset + buffer_view.byte_length];
+				println!("buffer: {:X?}", buffer);
+
+				
+			}
+		}
+	}
 }
