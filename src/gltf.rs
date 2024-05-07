@@ -5,6 +5,8 @@ use serde::Deserialize;
 use serde::Serialize;
 
 use crate::byte_eater::ByteEater;
+use crate::types::PrimitiveTopology;
+use crate::types::Vertex;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Asset {
@@ -251,6 +253,48 @@ mod tests {
 
 				
 			}
+		}
+	}
+}
+
+pub fn load_meshes<P: AsRef<Path>>(path: P, meshes: &mut Vec<crate::types::Mesh>) {
+	let path = path.as_ref();
+	let (gltf, buffers, _) = gltf::import(&path).unwrap();
+
+	for node in gltf.nodes() {
+		match node.mesh() {
+			Some(mesh) => {
+				println!("Mesh: {}", mesh.name().unwrap_or("Unnamed"));
+				for primitive in mesh.primitives() {
+					let mut new_mesh = crate::types::Mesh::new(PrimitiveTopology::from_mode(primitive.mode()));
+					println!("- Primitive #{}", primitive.index());
+
+					for (semantic, acc) in primitive.attributes() {
+						println!("Semantic: {:?}", semantic);
+					}
+
+					let reader = primitive.reader(|buffer| {
+						let buffer_data = &buffers[buffer.index()];
+						Some(&buffer_data.0[..])
+					});
+					if let Some(iter) = reader.read_positions() {
+						for vertex_position in iter {
+							new_mesh.vertices.push(Vertex::new([vertex_position[0], vertex_position[1], vertex_position[2]]));
+							// println!("{:?}", vertex_position);
+						}
+					}
+
+					reader.read_indices().map(|iter| {
+						for index in iter.into_u32() {
+							// println!("{:?}", index);
+							new_mesh.indices.push(index);
+						}
+					});
+
+					meshes.push(new_mesh);
+				}
+			},
+			None => {}
 		}
 	}
 }

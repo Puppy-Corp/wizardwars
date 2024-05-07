@@ -8,6 +8,7 @@ use winit::event::MouseScrollDelta;
 use winit::event::TouchPhase;
 use winit::event::VirtualKeyCode;
 use crate::camera::CameraPos;
+use crate::gltf::load_meshes;
 use crate::instance::Instance;
 use crate::matrix::Matrix4x4;
 use crate::structure::create_map;
@@ -28,21 +29,43 @@ pub struct EngineState {
 
 impl EngineState {
     pub fn new(time: u64) -> Self {
+		let mut meshes = Vec::new();
+		let mut entities = Vec::new();
+
         let map = create_map();
-		let entity = Entity {
-			mesh: 0,
-			loc: [0.0, 0.0, 0.0],
-			rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
-		};
-		let entity2 = Entity {
-			mesh: 0,
-			loc: [50.0, 0.0, 0.0],
-			rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
-		};
+		meshes.push(map);
+		// let entity = Entity {
+		// 	mesh: 0,
+		// 	loc: [0.0, 0.0, 0.0],
+		// 	rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
+		// };
+		// let entity2 = Entity {
+		// 	mesh: 0,
+		// 	loc: [50.0, 0.0, 0.0],
+		// 	rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
+		// };
+
+		load_meshes("./models/box.glb", &mut meshes);
+		// load_meshes("./models/fox.glb", &mut meshes);
+		load_meshes("./models/kani.glb", &mut meshes);
+
+		for (inx, mesh) in meshes.iter().enumerate() {
+			println!("Mesh vertices: {:?}", mesh.vertices.len());
+			println!("Mesh indices: {:?}", mesh.indices.len());
+
+			let entity = Entity {
+				mesh: inx,
+				loc: [30.0 * (inx as f32), 0.0, 0.0],
+				rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
+			};
+
+			entities.push(entity);	
+		}
+		
 
         Self {
-            entities: vec![entity, entity2],
-			meshes: vec![map],
+            entities,
+			meshes,
             speed: 5.0,
             player: Player {
                 position: Vector3::new(0.0, 0.0, 0.0),

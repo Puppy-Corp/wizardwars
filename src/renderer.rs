@@ -51,6 +51,21 @@ impl InstanceRaw {
     }
 }
 
+fn pad_and_align<T: bytemuck::Pod>(data: &[T], aligned_size: usize) -> Vec<u8> {
+    let raw_data = bytemuck::cast_slice(data);
+    let mut result = raw_data.to_vec();
+
+    // Calculate the padding required to align to the nearest multiple of `aligned_size`
+    let current_len = result.len();
+    let remainder = current_len % aligned_size;
+    if remainder != 0 {
+        let padding = aligned_size - remainder;
+        result.extend(std::iter::repeat(0).take(padding));
+    }
+
+    result
+}
+
 pub struct Renderer {
     prev_state: Option<SerializedState>,
     surface: wgpu::Surface,
@@ -215,7 +230,7 @@ impl Renderer {
             // allow the GPU to optimize the memory.
             usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
             // The size of the buffer in bytes.
-            size: 1024,
+            size: 200_000,
             // We will use this later
             mapped_at_creation: false,
         });
@@ -223,14 +238,14 @@ impl Renderer {
         let vertex_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Vertex Buffer"),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            size: 1024,
+            size: 200_000,
             mapped_at_creation: false,
         });
 
         let instance_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Instance Buffer"),
             usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-            size: 1024,
+            size: 200_000,
             mapped_at_creation: false,
         });
 
@@ -268,17 +283,17 @@ impl Renderer {
     }
 
     pub fn update(&mut self, state: SerializedState) {
-        let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
-        let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
-        let instance_buffer_slice = bytemuck::cast_slice(&state.instance_buffer);
+        let index_buffer_slice = pad_and_align(&state.index_buffer, 4);
+        let vertex_buffer_slice = pad_and_align(&state.vertex_buffer, 4);
+        let instance_buffer_slice = pad_and_align(&state.instance_buffer, 4);
 
         self.camera.update_pos(&state.camera);
         let uniform = self.camera.build_uniform();
         let camera_uniform = &[uniform];
         let came_uniform_slice = bytemuck::cast_slice(camera_uniform);
-        self.queue.write_buffer(&self.index_buffer, 0, index_buffer_slice);
-        self.queue.write_buffer(&self.vertex_buffer, 0, vertex_buffer_slice);
-        self.queue.write_buffer(&self.instance_buffer, 0, instance_buffer_slice);
+        self.queue.write_buffer(&self.index_buffer, 0, &index_buffer_slice);
+        self.queue.write_buffer(&self.vertex_buffer, 0, &vertex_buffer_slice);
+        self.queue.write_buffer(&self.instance_buffer, 0, &instance_buffer_slice);
         self.queue.write_buffer(&self.camera_buffer, 0, came_uniform_slice);
         self.shapes = state.shapes;
     }
