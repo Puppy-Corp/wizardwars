@@ -7,7 +7,7 @@ use args::Args;
 use args::Command;
 use clap::Parser;
 use engine::run_engine;
-use game::Game;
+use game::EngineState;
 use gltf::accessor::sparse::IndexType;
 use log::LevelFilter;
 use renderer::Renderer;
@@ -20,8 +20,9 @@ use winit::event_loop::EventLoop;
 use winit::window::CursorGrabMode;
 use winit::window::WindowBuilder;
 
-use crate::mesh::Mesh;
-use crate::mesh::PrimitiveTopology;
+use crate::types::Mesh;
+use crate::types::PrimitiveTopology;
+use crate::types::Vertex;
 
 mod renderer;
 mod game;
@@ -35,7 +36,7 @@ mod structure;
 mod args;
 mod engine;
 mod byte_eater;
-mod mesh;
+mod serializer;
 
 #[tokio::main]
 async fn main() {
@@ -106,7 +107,7 @@ async fn main() {
 							});
 							if let Some(iter) = reader.read_positions() {
 								for vertex_position in iter {
-									new_mesh.positions.push([vertex_position[0], vertex_position[1], vertex_position[2]]);
+									new_mesh.vertices.push(Vertex::new([vertex_position[0], vertex_position[1], vertex_position[2]]));
 									// println!("{:?}", vertex_position);
 								}
 							}
@@ -143,7 +144,7 @@ async fn main() {
 							// }
 							println!("Mesh.topology {:?}", new_mesh.topology);
 							println!("Mesh.indices {}", new_mesh.indices.len());
-							println!("Mesh.positions {}", new_mesh.positions.len());
+							println!("Mesh.positions {}", new_mesh.vertices.len());
 						}
 
 

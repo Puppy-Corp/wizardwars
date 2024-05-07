@@ -14,7 +14,7 @@ pub struct ShapeDesc {
 }
 
 #[derive(Debug)]
-pub struct SerializedGame {
+pub struct SerializedState {
     pub index_buffer: Vec<u16>,
     pub vertex_buffer: Vec<Vertex>,
     pub instance_buffer: Vec<Instance>,
@@ -53,7 +53,11 @@ impl Vertex {
                 },
             ],
         }
-    }    
+    }
+
+	pub fn size() -> usize {
+		std::mem::size_of::<Self>()
+	}    
 }
 
 #[derive(Clone)]
@@ -119,4 +123,55 @@ pub struct PlayerState {
     pub primary: bool,
     pub secondary: bool,
     pub third: bool,
+}
+
+#[derive(Debug, Clone)]
+pub struct Entity {
+	pub mesh: usize,
+	pub loc: [f32; 3],
+	pub rot: Quaternion<f32>,
+}
+
+pub enum Indices {
+	U16(Vec<u16>),
+	U32(Vec<u32>)
+}
+
+#[derive(Debug, Clone)]
+pub enum PrimitiveTopology {
+	PointList,
+	LineList,
+	LineStrip,
+	TriangleList,
+	TriangleStrip
+}
+
+impl PrimitiveTopology {
+	pub fn from_mode(mode: gltf::mesh::Mode) -> Self {
+		match mode {
+			gltf::mesh::Mode::Points => PrimitiveTopology::PointList,
+			gltf::mesh::Mode::Lines => PrimitiveTopology::LineList,
+			gltf::mesh::Mode::LineStrip => PrimitiveTopology::LineStrip,
+			gltf::mesh::Mode::Triangles => PrimitiveTopology::TriangleList,
+			gltf::mesh::Mode::TriangleStrip => PrimitiveTopology::TriangleStrip,
+			_ => panic!("Invalid primitive topology")
+		}
+	}
+}
+
+#[derive(Debug, Clone)]
+pub struct Mesh {
+	pub topology: PrimitiveTopology,
+	pub indices: Vec<u32>,
+	pub vertices: Vec<Vertex>
+}
+
+impl Mesh {
+	pub fn new(topology: PrimitiveTopology) -> Self {
+		Self {
+			topology,
+			indices: Vec::new(),
+			vertices: Vec::new(),
+		}
+	}
 }

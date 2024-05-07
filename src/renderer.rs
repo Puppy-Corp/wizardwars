@@ -2,7 +2,7 @@ use std::iter;
 use winit::window::Window;
 use crate::camera::Camera;
 use crate::camera::CameraUniform;
-use crate::types::SerializedGame;
+use crate::types::SerializedState;
 use crate::types::ShapeDesc;
 use crate::types::Vertex;
 
@@ -52,7 +52,7 @@ impl InstanceRaw {
 }
 
 pub struct Renderer {
-    prev_state: Option<SerializedGame>,
+    prev_state: Option<SerializedState>,
     surface: wgpu::Surface,
     device: wgpu::Device,
     queue: wgpu::Queue,
@@ -267,10 +267,11 @@ impl Renderer {
         }
     }
 
-    pub fn update(&mut self, state: SerializedGame) {
+    pub fn update(&mut self, state: SerializedState) {
         let index_buffer_slice = bytemuck::cast_slice(&state.index_buffer);
         let vertex_buffer_slice = bytemuck::cast_slice(&state.vertex_buffer);
         let instance_buffer_slice = bytemuck::cast_slice(&state.instance_buffer);
+
         self.camera.update_pos(&state.camera);
         let uniform = self.camera.build_uniform();
         let camera_uniform = &[uniform];

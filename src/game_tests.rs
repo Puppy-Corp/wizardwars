@@ -1,11 +1,11 @@
 
 #[cfg(test)]
 mod test {
-    use crate::game::Game;
+    use crate::game::EngineState;
 
     #[test]
     fn test() {
-        let game = Game::new(0);
+        let game = EngineState::new(0);
         
     }
 }

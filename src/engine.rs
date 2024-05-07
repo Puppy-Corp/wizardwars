@@ -6,8 +6,10 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::window::CursorGrabMode;
 use winit::window::WindowBuilder;
-use crate::game::Game;
+use crate::game::EngineState;
 use crate::renderer::Renderer;
+use crate::serializer;
+use crate::serializer::serialize;
 
 pub async fn run_engine() {
     let event_loop = EventLoop::new();
@@ -18,7 +20,7 @@ pub async fn run_engine() {
     let mut renderer = Renderer::new(window).await;
 
     let time = Instant::now();
-    let mut game = Game::new(time.elapsed().as_millis() as u64);
+    let mut game = EngineState::new(time.elapsed().as_millis() as u64);
     let mut cursor_grabbed = true;
 
     event_loop.run(move |event, _, control_flow| {
@@ -78,7 +80,8 @@ pub async fn run_engine() {
             }
             Event::RedrawRequested(_) => {
                 game.update(time.elapsed().as_millis() as u64);
-                renderer.update(game.serialize());
+				let serialized = serialize(&game);
+                renderer.update(serialized);
 
                 // renderer.render();
                 match renderer.render() {

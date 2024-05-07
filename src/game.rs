@@ -10,21 +10,15 @@ use winit::event::VirtualKeyCode;
 use crate::camera::CameraPos;
 use crate::instance::Instance;
 use crate::matrix::Matrix4x4;
-use crate::structure::Structure;
 use crate::structure::create_map;
-use crate::types::GameState;
-use crate::types::Player;
-use crate::types::PlayerState;
-use crate::types::SerializedGame;
-use crate::types::ShapeDesc;
-use crate::types::Vertex;
+use crate::types::*;
 
 #[derive(Default, Clone)]
-pub struct Game {
-    game_state: GameState,
-    strctures: Vec<Structure>,
+pub struct EngineState {
+    pub entities: Vec<Entity>,
+	pub meshes: Vec<Mesh>,
     player: Player,
-    camera: CameraPos,
+    pub camera: CameraPos,
     other_players: Vec<Player>,
     speed: f32,
     state: PlayerState,
@@ -32,13 +26,23 @@ pub struct Game {
     mouse_sensitivity: f32,
 }
 
-impl Game {
+impl EngineState {
     pub fn new(time: u64) -> Self {
-        let game = create_map();
+        let map = create_map();
+		let entity = Entity {
+			mesh: 0,
+			loc: [0.0, 0.0, 0.0],
+			rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
+		};
+		let entity2 = Entity {
+			mesh: 0,
+			loc: [50.0, 0.0, 0.0],
+			rot: Quaternion::new(0.0, 0.0, 0.0, 0.0)
+		};
 
         Self {
-            game_state: GameState::Lobby,
-            strctures: vec![game],
+            entities: vec![entity, entity2],
+			meshes: vec![map],
             speed: 5.0,
             player: Player {
                 position: Vector3::new(0.0, 0.0, 0.0),
@@ -116,46 +120,5 @@ impl Game {
 
         direction = direction * self.speed * (time_delta as f32 / 1000.0);
         self.camera.move_eye(direction);
-    }
-
-    pub fn serialize(&self) -> SerializedGame {
-        let mut vertex_buffer = vec![];
-        let mut index_buffer = vec![];
-
-        let mut index_buffer_index = 0;
-        let mut vertex_buffer_index = 0;
-        let mut instance_buffer_index = 0;
-
-        let mut shapes = vec![];
-        let mut instance_buffer = vec![];
-
-        for structure in &self.strctures {
-            let desc = ShapeDesc {
-                index_buffer_index,
-                vertex_buffer_index,
-                index_buffer_len: structure.indexes.len() * std::mem::size_of::<u16>(),
-                vertex_buffer_len: structure.vertexes.len() * std::mem::size_of::<Vertex>(),
-                instance_buffer_index: instance_buffer_index,
-                instance_buffer_len: 1
-            };
-            index_buffer_index += desc.index_buffer_len;
-            vertex_buffer_index += desc.vertex_buffer_len;
-            instance_buffer_index += desc.instance_buffer_len;
-
-            shapes.push(desc);
-            instance_buffer.push(Instance::new(Matrix4x4::from_translation(&structure.location)));
-
-            index_buffer.extend(structure.indexes.iter());
-            vertex_buffer.extend(structure.vertexes.iter());
-
-        }
-
-        SerializedGame {
-            index_buffer: index_buffer,
-            vertex_buffer: vertex_buffer,
-            shapes: shapes,
-            instance_buffer: instance_buffer,
-            camera: self.camera.clone(),
-        }
     }
 }
