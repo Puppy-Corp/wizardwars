@@ -25,13 +25,17 @@ pub struct SerializedState {
 #[repr(C)]
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 pub struct Vertex {
-    pub pos: [f32; 3]
+    pub pos: [f32; 3],
+	pub normal: [f32; 3],
+	pub uv: [f32; 2]
 }
 
 impl Vertex {
     pub fn new(pos: [f32; 3]) -> Self {
         Self {
-            pos
+            pos,
+			normal: [0.0, 0.0, 0.0],
+			uv: [0.0, 0.0]
         }
     }
 
@@ -82,7 +86,7 @@ pub struct Triangle {
     pub b_thick: f32,
     pub c_thick: f32,
 
-    pub material: Material,
+    // pub material: Material,
     pub rotation: Quaternion<f32>,
     pub position: Vector3<f32>,
 }
@@ -92,11 +96,11 @@ pub struct Shape {
     pub indexes: Vec<u16>,
 }
 
-#[derive(Clone)]
-pub enum Material {
-    Wood,
-    Stone
-}
+// #[derive(Clone)]
+// pub enum Material {
+//     Wood,
+//     Stone
+// }
 
 
 #[derive(Clone)]
@@ -174,4 +178,20 @@ impl Mesh {
 			vertices: Vec::new(),
 		}
 	}
+}
+
+pub struct Material {
+	pub base_color: [f32; 4],
+
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct MaterialUniform {
+    pub base_color: [f32; 4],
+    pub metallic: f32,
+    pub roughness: f32,
+    pub emissive: [f32; 3],
+    pub has_base_color_texture: u32, // 1 if texture is used, otherwise 0
+    pub _padding: u32,
 }

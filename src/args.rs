@@ -13,5 +13,8 @@ pub struct Args {
 pub enum Command {
     Inspect {
         path: String,
-    }
+    },
+	Display {
+		path: String,
+	}
 }

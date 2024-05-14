@@ -2,6 +2,10 @@ use std::iter;
 use winit::window::Window;
 use crate::camera::Camera;
 use crate::camera::CameraUniform;
+use crate::material_uniform::create_material_bind_group;
+use crate::material_uniform::create_material_bind_group_layout;
+use crate::material_uniform::create_material_uniform_buffer;
+use crate::material_uniform::MaterialUniform;
 use crate::types::SerializedState;
 use crate::types::ShapeDesc;
 use crate::types::Vertex;
@@ -140,6 +144,25 @@ impl Renderer {
 
         surface.configure(&device, &config);
 
+		let material_uniform = MaterialUniform {
+			base_color: [0.8, 0.2, 0.2, 1.0], // Base color (red)
+			metallic: 0.5,                   // Metallic value
+			roughness: 0.3,                   // Roughness value
+			emissive: [0.0, 0.0, 0.0],       // Emissive color
+			has_base_color_texture: 0,                 // No base color texture
+			_padding: 0,
+		};
+	
+		let material_buffer = create_material_uniform_buffer(&device, &material_uniform);
+		let material_bind_group_layout = create_material_bind_group_layout(&device);
+		let material_bind_group = create_material_bind_group(
+			&device,
+			&material_bind_group_layout,
+			&material_buffer,
+			None, // No base color texture
+			None, // No sampler
+		);
+
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shader"),
             source: wgpu::ShaderSource::Wgsl(include_str!("shader.wgsl").into()),
@@ -176,7 +199,7 @@ impl Renderer {
 
         let render_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Render Pipeline Layout"),
-            bind_group_layouts: &[&camera_bind_group_layout],
+            bind_group_layouts: &[&camera_bind_group_layout, &material_bind_group_layout],
             push_constant_ranges: &[],
         });
 
