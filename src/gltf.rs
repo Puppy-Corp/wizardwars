@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 
+use gltf::buffer::Data;
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -257,44 +258,62 @@ mod tests {
 	}
 }
 
-pub fn load_meshes<P: AsRef<Path>>(path: P, meshes: &mut Vec<crate::types::Mesh>) {
+fn load_node(n: &gltf::Node, buffers: &[Data]) -> crate::types::Node {
+	let mut node = crate::types::Node::new(n.name().unwrap_or_default().to_string());
+	for child in n.children() {
+		node.children.push(load_node(&child, buffers));
+	}
+	match n.mesh() {
+		Some(gltf_mesh) => {
+			println!("Mesh: {}", gltf_mesh.name().unwrap_or("Unnamed"));
+			for primitive in gltf_mesh.primitives() {
+				let mut new_mesh = crate::types::Mesh::new(PrimitiveTopology::from_mode(primitive.mode()));
+				println!("- Primitive #{}", primitive.index());
+
+				for (semantic, acc) in primitive.attributes() {
+					println!("Semantic: {:?}", semantic);
+				}
+
+				let reader = primitive.reader(|buffer| {
+					let buffer_data = &buffers[buffer.index()];
+					Some(&buffer_data.0[..])
+				});
+				if let Some(iter) = reader.read_positions() {
+					for vertex_position in iter {
+						new_mesh.vertices.push(Vertex::new([vertex_position[0], vertex_position[1], vertex_position[2]]));
+						// println!("{:?}", vertex_position);
+					}
+				}
+
+				reader.read_indices().map(|iter| {
+					for index in iter.into_u32() {
+						// println!("{:?}", index);
+						new_mesh.indices.push(index);
+					}
+				});
+
+				reader.read_normals().map(|iter| {
+					for normal in iter {
+						// println!("{:?}", normal);
+						new_mesh.normals.push([normal[0], normal[1], normal[2]]);
+					}
+				});
+
+				node.meshes.push(new_mesh);
+			}
+		},
+		None => {}
+	}
+
+	node
+}
+
+pub fn load_meshes<P: AsRef<Path>>(path: P, nodes: &mut Vec<crate::types::Node>) {
 	let path = path.as_ref();
 	let (gltf, buffers, _) = gltf::import(&path).unwrap();
 
-	for node in gltf.nodes() {
-		match node.mesh() {
-			Some(mesh) => {
-				println!("Mesh: {}", mesh.name().unwrap_or("Unnamed"));
-				for primitive in mesh.primitives() {
-					let mut new_mesh = crate::types::Mesh::new(PrimitiveTopology::from_mode(primitive.mode()));
-					println!("- Primitive #{}", primitive.index());
-
-					for (semantic, acc) in primitive.attributes() {
-						println!("Semantic: {:?}", semantic);
-					}
-
-					let reader = primitive.reader(|buffer| {
-						let buffer_data = &buffers[buffer.index()];
-						Some(&buffer_data.0[..])
-					});
-					if let Some(iter) = reader.read_positions() {
-						for vertex_position in iter {
-							new_mesh.vertices.push(Vertex::new([vertex_position[0], vertex_position[1], vertex_position[2]]));
-							// println!("{:?}", vertex_position);
-						}
-					}
-
-					reader.read_indices().map(|iter| {
-						for index in iter.into_u32() {
-							// println!("{:?}", index);
-							new_mesh.indices.push(index);
-						}
-					});
-
-					meshes.push(new_mesh);
-				}
-			},
-			None => {}
-		}
+	for n in gltf.nodes() {
+		let node = load_node(&n, &buffers);
+		nodes.push(node);
 	}
 }

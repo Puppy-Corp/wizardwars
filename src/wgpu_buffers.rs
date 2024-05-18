@@ -133,3 +133,11 @@ pub fn create_camera_bind_group(device: &wgpu::Device, layout: &wgpu::BindGroupL
 		]
 	})
 }
+
+pub fn create_indirect_buffer(device: &wgpu::Device, contents: &[u8]) -> wgpu::Buffer {
+	device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+		label: Some("Indirect Buffer"),
+		contents,
+		usage: wgpu::BufferUsages::INDIRECT | wgpu::BufferUsages::COPY_DST,
+	})
+}

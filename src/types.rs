@@ -1,25 +1,33 @@
 use cgmath::Quaternion;
 use cgmath::Vector3;
-use crate::camera::CameraPos;
+
+use crate::buffer::Buffer;
+use crate::buffer::Pointer;
 use crate::instance::Instance;
+use crate::matrix::Matrix4x4;
 
-#[derive(Debug)]
-pub struct ShapeDesc {
-    pub index_buffer_index: usize,
-    pub vertex_buffer_index: usize,
-    pub index_buffer_len: usize,
-    pub vertex_buffer_len: usize,
-    pub instance_buffer_index: usize,
-    pub instance_buffer_len: usize,
-}
+// #[derive(Debug)]
+// pub struct ShapeDesc {
+//     pub index_buffer_index: usize,
+//     pub vertex_buffer_index: usize,
+//     pub index_buffer_len: usize,
+//     pub vertex_buffer_len: usize,
+//     pub instance_buffer_index: usize,
+//     pub instance_buffer_len: usize,
+// }
 
-#[derive(Debug)]
-pub struct SerializedState {
-    pub index_buffer: Vec<u16>,
-    pub vertex_buffer: Vec<Vertex>,
-    pub instance_buffer: Vec<Instance>,
-    pub shapes: Vec<ShapeDesc>,
-    pub camera: CameraPos
+// #[derive(Debug)]
+// pub struct SerializedState {
+//     pub index_buffer: Vec<u16>,
+//     pub vertex_buffer: Vec<Vertex>,
+//     pub instance_buffer: Vec<Instance>,
+//     pub shapes: Vec<ShapeDesc>,
+//     pub camera: CameraPos
+// }
+
+pub struct DrawInstruction {
+	pub position_pointer: Pointer,
+	pub instances: Pointer
 }
 
 #[repr(C)]
@@ -167,7 +175,8 @@ impl PrimitiveTopology {
 pub struct Mesh {
 	pub topology: PrimitiveTopology,
 	pub indices: Vec<u32>,
-	pub vertices: Vec<Vertex>
+	pub vertices: Vec<Vertex>,
+	pub normals: Vec<[f32; 3]>,
 }
 
 impl Mesh {
@@ -176,9 +185,29 @@ impl Mesh {
 			topology,
 			indices: Vec::new(),
 			vertices: Vec::new(),
+			normals: Vec::new(),
 		}
 	}
 }
+
+#[derive(Debug, Clone)]
+pub struct Node {
+	pub name: String,
+	pub meshes: Vec<Mesh>,
+	pub children: Vec<Node>,
+}
+
+impl Node {
+	pub fn new(name: String) -> Self {
+		Self {
+			name,
+			meshes: Vec::new(),
+			children: Vec::new(),
+		}
+	}
+}
+
+
 
 pub struct Material {
 	pub base_color: [f32; 4],

@@ -82,7 +82,7 @@ pub struct CameraUniform {
 
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
-struct Instance {
+pub struct Instance {
     model_matrix: [[f32; 4]; 4],
 }
 

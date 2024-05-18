@@ -32,7 +32,13 @@ mod engine;
 mod args;
 mod wgpu_types;
 mod wgpu_buffers;
-
+mod renderer;
+mod gltf;
+mod types;
+mod byte_eater;
+mod buffer;
+mod instance;
+mod matrix;
 
 // mod renderer;
 // mod game;
