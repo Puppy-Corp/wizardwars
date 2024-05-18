@@ -7,8 +7,8 @@ use winit::event_loop::EventLoop;
 use winit::window::Window;
 use winit::window::WindowId;
 
-use crate::buffer::Buffer;
-use crate::gltf::load_meshes;
+use crate::buffer::BufferManager;
+use crate::gltf::load_nodes;
 use crate::matrix::Matrix4x4;
 use crate::renderer::RenderArgs;
 use crate::renderer::Renderer;
@@ -47,10 +47,11 @@ pub struct Engine<'a> {
 	adapter: Arc<wgpu::Adapter>,
 	instance: Arc<wgpu::Instance>,
 	renderers: HashMap<WindowId, Renderer<'a>>,
-	position_buffer: Buffer,
-	normal_buffer: Buffer,
-	tex_coord_buffer: Buffer,
-	instance_buffer: Buffer,
+	position_buffer: BufferManager,
+	normal_buffer: BufferManager,
+	tex_coord_buffer: BufferManager,
+	instance_buffer: BufferManager,
+	instructions: Vec<DrawInstruction>,
 }
 
 impl<'a> Engine<'a> {
@@ -78,10 +79,10 @@ impl<'a> Engine<'a> {
 			mapped_at_creation: false,
 		});
 
-		let position_buffer = Buffer::new(device.clone(), queue.clone());
-		let normal_buffer = Buffer::new(device.clone(), queue.clone());
-		let tex_coord_buffer = Buffer::new(device.clone(), queue.clone());
-		let instance_buffer = Buffer::new(device.clone(), queue.clone());
+		let position_buffer = BufferManager::new(device.clone(), queue.clone());
+		let normal_buffer = BufferManager::new(device.clone(), queue.clone());
+		let tex_coord_buffer = BufferManager::new(device.clone(), queue.clone());
+		let instance_buffer = BufferManager::new(device.clone(), queue.clone());
 
 		Ok(Self {
 			renderers: HashMap::new(),
@@ -93,6 +94,7 @@ impl<'a> Engine<'a> {
 			normal_buffer,
 			tex_coord_buffer,
 			instance_buffer,
+			instructions: Vec::new(),
 		})
 	}
 
@@ -100,7 +102,7 @@ impl<'a> Engine<'a> {
 		log::info!("Displaying: {}", path);
 
 		let mut nodes = Vec::<Node>::new();
-		load_meshes(path, &mut nodes);
+		load_nodes(path, &mut nodes);
 
 		println!("Nodes: {:?}", nodes);
 
@@ -109,13 +111,17 @@ impl<'a> Engine<'a> {
 			let mut positions: Vec<[f32; 3]> = Vec::with_capacity(node.meshes.iter().map(|m| m.vertices.len()).sum());
 			extract_positions(&node, &mut positions);
 
-			let pointer = self.position_buffer.store(bytemuck::cast_slice(&positions));
+			let position_pointer = self.position_buffer.store(bytemuck::cast_slice(&positions));
 			let m = Matrix4x4::from_translation(&[0.0, 0.0, 0.0]);
+			let instances_pointer = self.instance_buffer.store(bytemuck::cast_slice(&[m]));
 
-			// let instance = DrawInstruction {
-			// 	instance: ,
-			// 	position_pointer: pointer,
-			// };
+
+			let instruction = DrawInstruction {
+				instances_pointer,
+				position_pointer,
+			};
+
+			self.instructions.push(instruction);
 		}
 	}
 

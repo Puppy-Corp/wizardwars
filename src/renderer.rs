@@ -1,6 +1,8 @@
 use std::sync::Arc;
 use winit::dpi::PhysicalSize;
 use winit::window::Window;
+use crate::buffer::BufferManager;
+use crate::types::DrawInstruction;
 use crate::wgpu_types::*;
 
 fn create_pipeline(adapter: &wgpu::Adapter, device: &wgpu::Device, surface: &wgpu::Surface, size: PhysicalSize<u32>) -> wgpu::RenderPipeline {
@@ -92,6 +94,7 @@ pub struct RenderArgs {
 	pub instance: Arc<wgpu::Instance>,
 	pub adapter: Arc<wgpu::Adapter>,
 	pub device: Arc<wgpu::Device>,
+	pub positions_buffer: BufferManager
 }
 
 pub struct Renderer<'a> {
@@ -105,14 +108,8 @@ pub struct Renderer<'a> {
 impl<'a> Renderer<'a> {
 	pub fn new(args: RenderArgs) -> Self {
 		let size = args.window.inner_size();
-		// let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-		// 	backends: wgpu::Backends::all(),
-		// 	dx12_shader_compiler: Default::default(),
-		// 	..Default::default()
-		// });
 		let surface = args.instance.create_surface(args.window.clone()).unwrap();
 		let pipeline = create_pipeline(&args.adapter, &args.device, &surface, size);
-
 		Self {
 			window: args.window,
 			surface,
@@ -126,7 +123,7 @@ impl<'a> Renderer<'a> {
 		&self.window
 	}
 
-	pub fn render(&self) -> anyhow::Result<()> {
+	pub fn render(&self, instructions: &[DrawInstruction]) -> anyhow::Result<()> {
 		let output = self.surface.get_current_texture()?;
 		let view  = output.texture.create_view(&wgpu::TextureViewDescriptor::default());
 		let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
@@ -142,6 +139,26 @@ impl<'a> Renderer<'a> {
 			});
 
 			render_pass.set_pipeline(&self.pipeline);
+            // render_pass.set_bind_group(0, &self.camera_bind_group, &[]);
+
+            // for shape in &self.shapes {
+            //     let index_start = shape.index_buffer_index as u64;
+            //     let index_end = shape.index_buffer_index as u64 + shape.index_buffer_len as u64;
+            //     let vertex_start = shape.vertex_buffer_index as u64;
+            //     let vertex_end = shape.vertex_buffer_index as u64 + shape.vertex_buffer_len as u64;
+            //     let instance_start = shape.instance_buffer_index as u32;
+            //     let instance_end = shape.instance_buffer_index as u32 + shape.instance_buffer_len as u32;
+            //     render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(vertex_start..vertex_end));
+            //     render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+            //     render_pass.set_index_buffer(self.index_buffer.slice(index_start..index_end), wgpu::IndexFormat::Uint16);
+            //     render_pass.draw_indexed(0..(shape.index_buffer_len / 2) as u32, 0, instance_start..instance_end);
+            // }
+
+			render_pass.set_vertex_buffer(0, buffer_slice)
+
+			for instruction in instructions {
+
+			}
 		}
 		Ok(())
 	}

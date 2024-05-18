@@ -308,7 +308,7 @@ fn load_node(n: &gltf::Node, buffers: &[Data]) -> crate::types::Node {
 	node
 }
 
-pub fn load_meshes<P: AsRef<Path>>(path: P, nodes: &mut Vec<crate::types::Node>) {
+pub fn load_nodes<P: AsRef<Path>>(path: P, nodes: &mut Vec<crate::types::Node>) {
 	let path = path.as_ref();
 	let (gltf, buffers, _) = gltf::import(&path).unwrap();
 

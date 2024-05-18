@@ -1,7 +1,7 @@
 use cgmath::Quaternion;
 use cgmath::Vector3;
 
-use crate::buffer::Buffer;
+use crate::buffer::BufferManager;
 use crate::buffer::Pointer;
 use crate::instance::Instance;
 use crate::matrix::Matrix4x4;
@@ -27,7 +27,14 @@ use crate::matrix::Matrix4x4;
 
 pub struct DrawInstruction {
 	pub position_pointer: Pointer,
-	pub instances: Pointer
+	pub instances_pointer: Pointer
+}
+
+pub struct DrawInstructions<'a> {
+    pub position_buffer: &'a wgpu::Buffer,
+    pub index_buffer: &'a wgpu::Buffer,
+    pub normal_buffer: &'a wgpu::Buffer,
+    
 }
 
 #[repr(C)]
