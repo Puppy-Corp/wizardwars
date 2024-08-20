@@ -1864,7 +1864,7 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 [[package]]
 name = "pge"
 version = "0.0.0"
-source = "git+https://github.com/Puppy-Corp/pge.git?rev=5acf4621891d9e6e9f014420dcdbef3afd2597c5#5acf4621891d9e6e9f014420dcdbef3afd2597c5"
+source = "git+https://github.com/Puppy-Corp/pge.git?rev=72c8798a5071f7b28d3ef359285182837e7cb195#72c8798a5071f7b28d3ef359285182837e7cb195"
 dependencies = [
  "anyhow",
  "bytemuck",

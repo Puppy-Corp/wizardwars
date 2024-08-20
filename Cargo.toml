@@ -11,5 +11,5 @@ tokio = { version = "1", features = ["full"] }
 log = "0.4"
 simple_logger = "4"
 clap = { version = "4", features = ["derive"] }
-pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "5acf4621891d9e6e9f014420dcdbef3afd2597c5" }
+pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "72c8798a5071f7b28d3ef359285182837e7cb195" }
 rand = "0.8"

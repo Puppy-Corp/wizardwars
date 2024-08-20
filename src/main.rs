@@ -1,61 +1,24 @@
 mod args;
+mod inventory;
+mod ak47;
+mod katana;
+mod utility;
+mod player;
 
 use std::time::Instant;
-
+use ak47::AK47;
+use inventory::Inventory;
+use katana::Katana;
 use log::LevelFilter;
 use pge::*;
+use player::Player;
 use rand::Rng;
 use simple_logger::SimpleLogger;
+use utility::PressedKeys;
 
 struct Bullet {
 	spawned: Instant,
 	node_id: ArenaId<Node>,
-}
-
-#[derive(Debug, Clone)]
-struct PressedKeys {
-	forward: bool,
-	backward: bool,
-	left: bool,
-	right: bool,
-}
-
-impl PressedKeys {
-	pub fn new() -> Self {
-		Self {
-			forward: false,
-			backward: false,
-			left: false,
-			right: false,
-		}
-	}
-
-	pub fn to_vec3(&self) -> Vec3 {
-        let mut direction = Vec3::ZERO;
-
-        if self.forward {
-            direction += Vec3::Z;
-        }
-        if self.backward {
-            direction -= Vec3::Z;
-        }
-        if self.left {
-            direction -= Vec3::X;
-        }
-        if self.right {
-            direction += Vec3::X;
-        }
-
-        if direction.length_squared() > 0.0 {
-            direction = direction.normalize();
-        }
-
-        direction
-    }
-
-	pub fn any_pressed(&self) -> bool {
-		self.forward || self.backward || self.left || self.right
-	}
 }
 
 pub struct WizardWars {
@@ -76,10 +39,16 @@ pub struct WizardWars {
 	firing_rate: Instant,
 	shooting: bool,
 	bullet_mesh: Option<ArenaId<Mesh>>,
+	inventory: Inventory,
+	players: Vec<Player>
 }
 
 impl WizardWars {
 	pub fn new() -> Self {
+		let mut inventory = Inventory::new();
+		inventory.add_item(AK47::new());
+		inventory.add_item(Katana::new());
+
 		Self {
 			main_scene: None,
 			sensitivity: 0.001,
@@ -98,6 +67,8 @@ impl WizardWars {
 			firing_rate: Instant::now(),
 			shooting: false,
 			bullet_mesh: None,
+			inventory,
+			players: Vec::new()
 		}
 	}
 
@@ -289,6 +260,15 @@ impl WizardWars {
 		self.pitch += y * self.sensitivity;
 		self.pitch = self.pitch.clamp(-1.5, 1.5);
 	}
+
+	pub fn hide_node(&mut self, state: &mut State, node_id: ArenaId<Node>) {
+		let node = match state.nodes.get_mut(&node_id) {
+			Some(node) => node,
+			None => return,
+		};
+
+		node.parent = NodeParent::Orphan;
+	}
 }
 
 impl pge::App for WizardWars {
@@ -300,6 +280,11 @@ impl pge::App for WizardWars {
 		let bullet_mesh = cube(0.3);
 		let bullet_mesh_id = state.meshes.insert(bullet_mesh);
 		self.bullet_mesh = Some(bullet_mesh_id);
+
+		// self.ak47 = Some(load_model("assets/ak47.glb", state));
+		// self.katana = Some(load_model("assets/katana.glb", state));
+
+		self.inventory.prepare(state);
 
 		let texture = Texture::new("assets/wall_medium.png");
 		let texture_id = state.textures.insert(texture);
@@ -417,8 +402,8 @@ impl pge::App for WizardWars {
 		camera.zfar = 1000.0;
 		camera.node_id = Some(player_id);
 		let camera_id = state.cameras.insert(camera);
-		let gui = camera_view(camera_id);
-		let gui_id = state.guis.insert(gui);
+		// let gui = camera_view(camera_id);
+		// let gui_id = state.guis.insert(gui);
 
 		let cube_mesh = cube(1.0);
 		let cube_mesh_id = state.meshes.insert(cube_mesh);
@@ -443,6 +428,17 @@ impl pge::App for WizardWars {
 			cube.parent = NodeParent::Scene(main_scene_id);
 			let cube_id = state.nodes.insert(cube);
 		}
+
+		let ui = stack(&[
+			camera_view(camera_id),
+			row(&[
+				rect().background_color(Color::BLUE),
+				rect().background_color(Color::RED),
+				rect().background_color(Color::CYAN),
+				rect().background_color(Color::WHITE)
+			]).height(0.1).anchor_bottom()
+		]);
+		let gui_id = state.guis.insert(ui);
 
 		let window = Window::new()
 			.title("Wizard Wars")
@@ -472,6 +468,12 @@ impl pge::App for WizardWars {
 					KeyboardKey::G => {
 						self.gripping = true
 					},
+					KeyboardKey::Digit1 => self.inventory.equip(0, state, self.player_id.unwrap()),
+					KeyboardKey::Digit2 => self.inventory.equip(1, state, self.player_id.unwrap()),
+					KeyboardKey::Digit3 => self.inventory.equip(2, state, self.player_id.unwrap()),
+					KeyboardKey::Digit4 => self.inventory.equip(3, state, self.player_id.unwrap()),
+					KeyboardKey::Digit5 => self.inventory.equip(4, state, self.player_id.unwrap()),
+					KeyboardKey::Digit6 => self.inventory.equip(5, state, self.player_id.unwrap()),
 					_ => {}
 				}
 			},
