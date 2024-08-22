@@ -1,6 +1,5 @@
 use std::f32::consts::PI;
-
-use crate::inventory::InvetoryItem;
+use crate::types::Item;
 use crate::utility::load_model;
 
 use pge::*;
@@ -17,7 +16,7 @@ impl AK47 {
 	}
 }
 
-impl InvetoryItem for AK47 {
+impl Item for AK47 {
 	fn prepare(&mut self, state: &mut pge::State) {
 		let node_id = load_model("assets/ak47.glb", state);
 		let node = state.nodes.get_mut(&node_id).unwrap();
@@ -33,7 +32,7 @@ impl InvetoryItem for AK47 {
 		node.parent = NodeParent::Node(parent_id);
 	}
 
-	fn deactivate(&mut self, state: &mut pge::State) {
+	fn hide(&mut self, state: &mut pge::State) {
 		let node_id = self.node_id.unwrap();
 		let node = state.nodes.get_mut(&node_id).unwrap();
 		node.parent = NodeParent::Orphan;

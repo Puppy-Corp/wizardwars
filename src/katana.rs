@@ -1,6 +1,6 @@
 use pge::*;
 
-use crate::inventory::InvetoryItem;
+use crate::types::Item;
 use crate::utility::load_model;
 
 pub struct Katana {
@@ -15,7 +15,7 @@ impl Katana {
 	}
 }
 
-impl InvetoryItem for Katana {
+impl Item for Katana {
 	fn prepare(&mut self, state: &mut pge::State) {
 		let node_id = load_model("assets/katana.glb", state);
 		let node = state.nodes.get_mut(&node_id).unwrap();
@@ -30,7 +30,7 @@ impl InvetoryItem for Katana {
 		node.parent = NodeParent::Node(parent_id);
 	}
 
-	fn deactivate(&mut self, state: &mut pge::State) {
+	fn hide(&mut self, state: &mut pge::State) {
 		let node_id = self.node_id.unwrap();
 		let node = state.nodes.get_mut(&node_id).unwrap();
 		node.parent = NodeParent::Orphan;

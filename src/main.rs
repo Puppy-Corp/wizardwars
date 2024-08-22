@@ -4,6 +4,9 @@ mod ak47;
 mod katana;
 mod utility;
 mod player;
+mod types;
+mod pulse_rifle;
+mod survival;
 
 use std::time::Instant;
 use ak47::AK47;
@@ -14,7 +17,13 @@ use pge::*;
 use player::Player;
 use rand::Rng;
 use simple_logger::SimpleLogger;
+use survival::Survival;
 use utility::PressedKeys;
+
+enum GameMode {
+	Loading,
+	Survival(Survival)
+}
 
 struct Bullet {
 	spawned: Instant,
@@ -40,7 +49,9 @@ pub struct WizardWars {
 	shooting: bool,
 	bullet_mesh: Option<ArenaId<Mesh>>,
 	inventory: Inventory,
-	players: Vec<Player>
+	current_player: Option<Player>,
+	players: Vec<Player>,
+	game_mode: GameMode
 }
 
 impl WizardWars {
@@ -68,7 +79,9 @@ impl WizardWars {
 			shooting: false,
 			bullet_mesh: None,
 			inventory,
-			players: Vec::new()
+			current_player: None,
+			players: Vec::new(),
+			game_mode: GameMode::Loading
 		}
 	}
 
@@ -273,9 +286,13 @@ impl WizardWars {
 
 impl pge::App for WizardWars {
 	fn on_create(&mut self, state: &mut pge::State) {
+		self.game_mode = GameMode::Survival(Survival::new(state));
+
 		let main_scene = Scene::new();
 		let main_scene_id = state.scenes.insert(main_scene);
 		self.main_scene = Some(main_scene_id);
+
+		let player = Player::spawn(state);
 
 		let bullet_mesh = cube(0.3);
 		let bullet_mesh_id = state.meshes.insert(bullet_mesh);
@@ -449,108 +466,85 @@ impl pge::App for WizardWars {
 	}
 
 	fn on_keyboard_input(&mut self, key: KeyboardKey, action: KeyAction, state: &mut State) {
-		match action {
-			KeyAction::Pressed => {
-				match key {
-					KeyboardKey::W => self.pressed_keys.forward = true,
-					KeyboardKey::S => self.pressed_keys.backward = true,
-					KeyboardKey::A => self.pressed_keys.left = true,
-					KeyboardKey::D => self.pressed_keys.right = true,
-					KeyboardKey::ShiftLeft => self.dashing = true,
-					KeyboardKey::Space => {
-						let player_inx = match self.player_id {
-							Some(index) => index,
-							None => return,
-						};
-						let player = state.nodes.get_mut(&player_inx).unwrap();
-						player.physics.velocity.y = 10.0;
-					},
-					KeyboardKey::G => {
-						self.gripping = true
-					},
-					KeyboardKey::Digit1 => self.inventory.equip(0, state, self.player_id.unwrap()),
-					KeyboardKey::Digit2 => self.inventory.equip(1, state, self.player_id.unwrap()),
-					KeyboardKey::Digit3 => self.inventory.equip(2, state, self.player_id.unwrap()),
-					KeyboardKey::Digit4 => self.inventory.equip(3, state, self.player_id.unwrap()),
-					KeyboardKey::Digit5 => self.inventory.equip(4, state, self.player_id.unwrap()),
-					KeyboardKey::Digit6 => self.inventory.equip(5, state, self.player_id.unwrap()),
-					_ => {}
-				}
-			},
-			KeyAction::Released => {
-				match key {
-					KeyboardKey::W => self.pressed_keys.forward = false,
-					KeyboardKey::S => self.pressed_keys.backward = false,
-					KeyboardKey::A => self.pressed_keys.left = false,
-					KeyboardKey::D => self.pressed_keys.right = false,
-					KeyboardKey::ShiftLeft => self.dashing = false,
-					KeyboardKey::G => {
-						self.gripping = false;
-						self.gripping_node = None;
-					},
-					_ => {}
-				}
-			},
-		};
-	}
-
-	fn on_mouse_input(&mut self, event: MouseEvent, state: &mut State) {
-		match event {
-			MouseEvent::Moved { dx, dy } => {
-				let player_inx = match self.player_id {
-					Some(index) => index,
-					None => return,
-				};
-				self.rotate_player(dx, dy);
-				let player = state.nodes.get_mut(&player_inx).unwrap();
-				player.rotation = Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0);
-			},
-			MouseEvent::Pressed { button } => {
-				match button {
-					MouseButton::Left => {
-						match self.gripping_node.take() {
-							Some(gripping_node_id) => {
-								self.gripping = false;
-								let push_vel = {
-									let player_inx = match self.player_id {
-										Some(index) => index,
-										None => return,
-									};
-	
-									let player = match state.nodes.get_mut(&player_inx) {
-										Some(node) => node,
-										None => return,
-									};
-	
-									let dir = player.rotation * Vec3::new(0.0, 0.0, 1.0);
-									dir * 100.0
-								};
-	
-								if let Some(node) = state.nodes.get_mut(&gripping_node_id) {
-									node.physics.velocity = push_vel;
-								}
-							},
-							None => {
-								self.shooting = true;
-							}
-						}
-						
-						self.shooting = true
-					},
-					_ => {}
-				}
-			},
-			MouseEvent::Released { button } => {
-				match button {
-					MouseButton::Left => self.shooting = false,
-					_ => {}
-				}
+		match self.game_mode {
+			GameMode::Survival(ref mut survival) => {
+				survival.on_keyboard_input(key, action, state);
 			},
 			_ => {}
 		}
 	}
 
+	fn on_mouse_input(&mut self, event: MouseEvent, state: &mut State) {
+		match self.game_mode {
+			GameMode::Survival(ref mut survival) => {
+				survival.on_mouse_input(event, state);
+			},
+			_ => {}
+		}
+
+		// match event {
+		// 	MouseEvent::Moved { dx, dy } => {
+		// 		let player_inx = match self.player_id {
+		// 			Some(index) => index,
+		// 			None => return,
+		// 		};
+		// 		self.rotate_player(dx, dy);
+		// 		let player = state.nodes.get_mut(&player_inx).unwrap();
+		// 		player.rotation = Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0);
+		// 	},
+		// 	MouseEvent::Pressed { button } => {
+		// 		match button {
+		// 			MouseButton::Left => {
+		// 				match self.gripping_node.take() {
+		// 					Some(gripping_node_id) => {
+		// 						self.gripping = false;
+		// 						let push_vel = {
+		// 							let player_inx = match self.player_id {
+		// 								Some(index) => index,
+		// 								None => return,
+		// 							};
+	
+		// 							let player = match state.nodes.get_mut(&player_inx) {
+		// 								Some(node) => node,
+		// 								None => return,
+		// 							};
+	
+		// 							let dir = player.rotation * Vec3::new(0.0, 0.0, 1.0);
+		// 							dir * 100.0
+		// 						};
+	
+		// 						if let Some(node) = state.nodes.get_mut(&gripping_node_id) {
+		// 							node.physics.velocity = push_vel;
+		// 						}
+		// 					},
+		// 					None => {
+		// 						self.shooting = true;
+		// 					}
+		// 				}
+						
+		// 				self.shooting = true
+		// 			},
+		// 			_ => {}
+		// 		}
+		// 	},
+		// 	MouseEvent::Released { button } => {
+		// 		match button {
+		// 			MouseButton::Left => self.shooting = false,
+		// 			_ => {}
+		// 		}
+		// 	},
+		// 	_ => {}
+		// }
+	}
+
 	fn on_process(&mut self, state: &mut State, delta: f32) {
+		match self.game_mode {
+			GameMode::Survival(ref mut survival) => {
+				survival.on_process(state, delta);
+			},
+			_ => {}
+		};
+
 		// if let Some(index) = self.light_inx {
 		// 	let light = state.nodes.get_mut(index).unwrap();
 		// 	self.light_circle_i += delta;
@@ -559,10 +553,14 @@ impl pge::App for WizardWars {
 		// 	light.set_translation(x, 10.0, z);
 		// }
 
-		self.handle_rays(state);
-		self.handle_dashing(state);
-		self.handle_shooting(state);
-		self.handle_moving(state);
+		// self.handle_rays(state);
+		// self.handle_dashing(state);
+		// self.handle_shooting(state);
+		// self.handle_moving(state);
+
+		// for player in &mut self.players {
+		// 	player.process(state);
+		// }
 	}
 }
 
