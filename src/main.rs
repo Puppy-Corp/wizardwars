@@ -7,6 +7,9 @@ mod player;
 mod types;
 mod pulse_rifle;
 mod survival;
+mod npc;
+mod mobs;
+mod dark_dungeon;
 
 use std::time::Instant;
 use ak47::AK47;
@@ -48,7 +51,6 @@ pub struct WizardWars {
 	firing_rate: Instant,
 	shooting: bool,
 	bullet_mesh: Option<ArenaId<Mesh>>,
-	inventory: Inventory,
 	current_player: Option<Player>,
 	players: Vec<Player>,
 	game_mode: GameMode
@@ -56,10 +58,6 @@ pub struct WizardWars {
 
 impl WizardWars {
 	pub fn new() -> Self {
-		let mut inventory = Inventory::new();
-		inventory.add_item(AK47::new());
-		inventory.add_item(Katana::new());
-
 		Self {
 			main_scene: None,
 			sensitivity: 0.001,
@@ -78,7 +76,6 @@ impl WizardWars {
 			firing_rate: Instant::now(),
 			shooting: false,
 			bullet_mesh: None,
-			inventory,
 			current_player: None,
 			players: Vec::new(),
 			game_mode: GameMode::Loading
@@ -292,7 +289,7 @@ impl pge::App for WizardWars {
 		let main_scene_id = state.scenes.insert(main_scene);
 		self.main_scene = Some(main_scene_id);
 
-		let player = Player::spawn(state);
+		// let player = Player::spawn(state);
 
 		let bullet_mesh = cube(0.3);
 		let bullet_mesh_id = state.meshes.insert(bullet_mesh);
@@ -301,7 +298,7 @@ impl pge::App for WizardWars {
 		// self.ak47 = Some(load_model("assets/ak47.glb", state));
 		// self.katana = Some(load_model("assets/katana.glb", state));
 
-		self.inventory.prepare(state);
+		// self.inventory.prepare(state);
 
 		let texture = Texture::new("assets/wall_medium.png");
 		let texture_id = state.textures.insert(texture);

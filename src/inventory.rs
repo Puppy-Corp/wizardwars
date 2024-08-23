@@ -19,7 +19,7 @@ pub struct Inventory {
 }
 
 impl Inventory{
-	pub fn new() -> Self {
+	pub fn new(size: usize) -> Self {
 		Self {
 			active: None,
 			items: Vec::new(),

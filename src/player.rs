@@ -1,7 +1,60 @@
 use pge::*;
-use rand::seq::index;
-
 use crate::inventory::Inventory;
+
+pub struct PlayerBuilder {
+	inventory_size: usize,
+	team: u32,
+	mana: u32,
+	health: u32
+}
+
+impl PlayerBuilder {
+	pub fn new() -> Self {
+		Self {
+			inventory_size: 10,
+			team: 0,
+			mana: 100,
+			health: 100
+		}
+	}
+
+	pub fn team(mut self, team: u32) -> Self {
+		self.team = team;
+		self
+	}
+
+	pub fn inventory_size(mut self, size: usize) -> Self {
+		self.inventory_size = size;
+		self
+	}
+
+	pub fn mana(mut self, mana: u32) -> Self {
+		self.mana = mana;
+		self
+	}
+
+	pub fn health(mut self, health: u32) -> Self {
+		self.health = health;
+		self
+	}
+
+	pub fn build(self, state: &mut State) -> Player {
+		let node = Node::new();
+		let node_id = state.nodes.insert(node);
+
+		Player {
+			node_id,
+			crouching: false,
+			inventory: Inventory::new(self.inventory_size),
+			spriting: false,
+			jumping: false,
+			prone: false,
+			mana: 100,
+			team: self.team,
+			death: false
+		}
+	}
+}
 
 pub struct Player {
 	node_id: ArenaId<Node>,
@@ -11,23 +64,26 @@ pub struct Player {
 	pub jumping: bool,
 	crouching: bool,
 	prone: bool,
+	team: u32,
+	pub death: bool
 }
 
 impl Player {
-	pub fn spawn(state: &mut State) -> Self {
-		let node = Node::new();
-		let node_id = state.nodes.insert(node);
+	// pub fn spawn(state: &mut State) -> Self {
+	// 	let node = Node::new();
+	// 	let node_id = state.nodes.insert(node);
 
-		Self {
-			node_id,
-			mana: 100,
-			inventory: Inventory::new(),
-			spriting: false,
-			jumping: false,
-			crouching: false,
-			prone: false,
-		}
-	}
+	// 	Self {
+	// 		node_id,
+	// 		mana: 100,
+	// 		inventory: Inventory::new(),
+	// 		spriting: false,
+	// 		jumping: false,
+	// 		crouching: false,
+	// 		prone: false,
+	// 		team: 0
+	// 	}
+	// }
 
 	pub fn process(&mut self, state: &mut State) {
 

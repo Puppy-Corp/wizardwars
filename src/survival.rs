@@ -1,19 +1,45 @@
+use std::time::Instant;
+
 use pge::*;
 
+use crate::dark_dungeon::DarkDungeon;
+use crate::mobs::spawn_mob;
+use crate::npc::Npc;
 use crate::player::Player;
+use crate::player::PlayerBuilder;
+use crate::types::SurvivalMap;
 use crate::utility::PressedKeys;
 
 pub struct Survival {
 	player: Player,
+	wave: u32,
 	pressed_keys: PressedKeys,
+	enemies: Vec<Npc>,
+	max_enemies: u32,
+	enemies_spawned: u32,
+	since_last_spawn: Instant,
+	map: Box<dyn SurvivalMap>
 }
 
 impl Survival {
 	pub fn new(state: &mut State) -> Self {
 		Self {
-			player: Player::spawn(state),
+			wave: 0,
+			player: PlayerBuilder::new().build(state),
 			pressed_keys: PressedKeys::new(),
+			enemies: Vec::new(),
+			max_enemies: 10,
+			enemies_spawned: 0,
+			since_last_spawn: Instant::now(),
+			map: Box::new(DarkDungeon {})
 		}
+	}
+
+	fn start_next_wave(&mut self, state: &mut State) {
+		// How to despawn enemies ??
+		self.wave += 1;
+		self.max_enemies += 5;
+		self.enemies_spawned = 0;
 	}
 
 	pub fn on_mouse_input(&mut self, event: MouseEvent, state: &mut State) {
@@ -76,6 +102,27 @@ impl Survival {
 	}
 
 	pub fn on_process(&mut self, state: &mut State, delta: f32) {
+		self.player.process(state);
+		let mut all_enemies_dead = true;
+		for enemy in &mut self.enemies {
+			enemy.process(state);
+			if !enemy.player.death {
+				all_enemies_dead = false;
+			}
+		}
 
+		if all_enemies_dead && self.enemies_spawned >= self.max_enemies {
+			self.start_next_wave(state);
+		}
+
+		if self.enemies_spawned < self.max_enemies {
+			let time_since_last_spawn = self.since_last_spawn.elapsed().as_secs_f32();
+			if time_since_last_spawn > 2.0 {
+				self.enemies.push(spawn_mob(state, self.map.get_mob_spawn_point()));
+				self.enemies_spawned += 1;
+				self.since_last_spawn = Instant::now();
+			}
+		}
+		self.map.process(state);
 	}
 }
