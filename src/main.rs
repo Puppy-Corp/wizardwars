@@ -10,6 +10,7 @@ mod survival;
 mod npc;
 mod mobs;
 mod dark_dungeon;
+mod controller;
 
 use std::time::Instant;
 use ak47::AK47;
@@ -21,7 +22,7 @@ use player::Player;
 use rand::Rng;
 use simple_logger::SimpleLogger;
 use survival::Survival;
-use utility::PressedKeys;
+use utility::MoveDirection;
 
 enum GameMode {
 	Loading,
@@ -40,7 +41,7 @@ pub struct WizardWars {
 	yaw: f32,
 	pitch: f32,
 	speed: f32,
-	pressed_keys: PressedKeys,
+	pressed_keys: MoveDirection,
 	dashing: bool,
 	movement_force: f32,
 	rng: rand::rngs::ThreadRng,
@@ -53,7 +54,7 @@ pub struct WizardWars {
 	bullet_mesh: Option<ArenaId<Mesh>>,
 	current_player: Option<Player>,
 	players: Vec<Player>,
-	game_mode: GameMode
+	game_mode: GameMode,
 }
 
 impl WizardWars {
@@ -65,7 +66,7 @@ impl WizardWars {
 			yaw: 0.0,
 			pitch: 0.0,
 			speed: 10.0,
-			pressed_keys: PressedKeys::new(),
+			pressed_keys: MoveDirection::new(),
 			dashing: false,
 			movement_force: 1600.0,
 			rng: rand::thread_rng(),
@@ -228,7 +229,7 @@ impl WizardWars {
 		};
 
 		let current_speed = player.physics.velocity.length();
-		if self.pressed_keys.any_pressed() {
+		if self.pressed_keys.is_moving() {
 			let dir = self.pressed_keys.to_vec3();
 			let mut force = player.rotation * dir;
 
@@ -283,7 +284,17 @@ impl WizardWars {
 
 impl pge::App for WizardWars {
 	fn on_create(&mut self, state: &mut pge::State) {
-		self.game_mode = GameMode::Survival(Survival::new(state));
+		let window = Window::new()
+			.title("Wizard Wars")
+			.lock_cursor(true);
+		let window_id = state.windows.insert(window);
+
+		// let mut camera = pge::Camera::new();
+		// camera.zfar = 1000.0;
+		// camera.node_id = Some(player.node_id);
+		// let camera_id = state.cameras.insert(camera);
+
+		self.game_mode = GameMode::Survival(Survival::new(state, window_id));
 
 		let main_scene = Scene::new();
 		let main_scene_id = state.scenes.insert(main_scene);
@@ -300,103 +311,11 @@ impl pge::App for WizardWars {
 
 		// self.inventory.prepare(state);
 
-		let texture = Texture::new("assets/wall_medium.png");
-		let texture_id = state.textures.insert(texture);
-
-		let size = 200.0;
-
-		let mut wall_mesh = plane(size, size);
-		// wall_mesh.tex_coords = vec![
-		// 	[0.0, 0.0],
-		// 	[1.0, 0.0],
-		// 	[1.0, 1.0],
-		// 	[0.0, 1.0],
-		// ];
-		wall_mesh.texture = Some(texture_id);
-
-		let mut forward_wall = Node::new();
-		forward_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
-		forward_wall.translation = Vec3::new(0.0, 0.0, size);
-		forward_wall.looking_at(0.0, 0.0, 0.0);
-		// rotate 90 degrees
-		forward_wall.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 1.5708, 0.0);
-		forward_wall.collision_shape = Some(CollisionShape::Box { size: Vec3::new(size, size, 1.0) });
-		forward_wall.physics.typ = PhycisObjectType::Static;
-		forward_wall.parent = NodeParent::Scene(main_scene_id);
-		state.nodes.insert(forward_wall);
-
-		let mut back_wall = Node::new();
-		back_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
-		back_wall.translation = Vec3::new(0.0, 0.0, -size);
-		back_wall.looking_at(0.0, 0.0, 0.0);
-		// rotate 90 degrees
-		back_wall.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 1.5708, 0.0);
-		back_wall.collision_shape = Some(CollisionShape::Box { size: Vec3::new(size, size, 1.0) });
-		back_wall.physics.typ = PhycisObjectType::Static;
-		back_wall.parent = NodeParent::Scene(main_scene_id);
-		state.nodes.insert(back_wall);
-
-		let mut left_wall = Node::new();
-		left_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
-		left_wall.translation = Vec3::new(-size, 0.0, 0.0);
-		left_wall.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 1.5708);
-		left_wall.collision_shape = Some(CollisionShape::Box { size: Vec3::new(1.0, size, size) });
-		left_wall.physics.typ = PhycisObjectType::Static;
-		left_wall.parent = NodeParent::Scene(main_scene_id);
-		// left_wall.looking_at(0.0, 0.0, 0.0);
-		state.nodes.insert(left_wall);
-
-		let mut top_wall = Node::new();
-		top_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
-		top_wall.translation = Vec3::new(0.0, size, 0.0);
-		top_wall.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 0.0);
-		// top_wall.collision_shape = Some(CollisionShape::Box { size: Vec3::new(size, size, 1.0) });
-		top_wall.physics.typ = PhycisObjectType::Static;
-		top_wall.parent = NodeParent::Scene(main_scene_id);
-		state.nodes.insert(top_wall);
-
-		let mut right_wall = Node::new();
-		right_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
-		right_wall.translation = Vec3::new(size, 0.0, 0.0);
-		right_wall.rotation = Quat::from_euler(EulerRot::YXZ, 0.0, 0.0, 1.5708);
-		right_wall.collision_shape = Some(CollisionShape::Box { size: Vec3::new(1.0, size, size) });
-		right_wall.physics.typ = PhycisObjectType::Static;
-		right_wall.parent = NodeParent::Scene(main_scene_id);
-		state.nodes.insert(right_wall);
-
-		
-
 		// let mut light_node = Node::new();
 		// light_node.translation = Vec3::new(0.0, 45.0, 0.0);
 		// let light_node_id = state.nodes.insert(light_node);
 
-		//spawn random lights
-		for i in 0..5 {
-			let rand_x = self.rng.gen_range(-25.0..25.0);
-			let rand_z = self.rng.gen_range(-25.0..25.0);
-			let mut light_node = Node::new();
-			light_node.translation = Vec3::new(rand_x, 45.0, rand_z);
-			light_node.parent = NodeParent::Scene(main_scene_id);
-			let light_node_id = state.nodes.insert(light_node);
 
-			let mut light = PointLight::new();
-			light.node_id = Some(light_node_id);
-			light.color = [1.0, 1.0, 1.0];
-			light.intensity = 1.0;
-			light.node_id = Some(light_node_id);
-			let light_id = state.point_lights.insert(light);
-		}
-
-		let floor_mesh = plane(size, size);
-		let floor_id = state.meshes.insert(floor_mesh);
-
-		let mut floor = Node::new();
-		floor.translation = Vec3::new(0.0, -1.0, 0.0);
-		floor.mesh = Some(floor_id);
-		floor.collision_shape = Some(CollisionShape::Box { size: Vec3::new(size, 1.0, size) });
-		floor.physics.typ = PhycisObjectType::Static;
-		floor.parent = NodeParent::Scene(main_scene_id);
-		state.nodes.insert(floor);
 
 		let mut player = Node::new();
 		player.translation = Vec3::new(0.0, 2.0, -30.0);
@@ -419,29 +338,29 @@ impl pge::App for WizardWars {
 		// let gui = camera_view(camera_id);
 		// let gui_id = state.guis.insert(gui);
 
-		let cube_mesh = cube(1.0);
-		let cube_mesh_id = state.meshes.insert(cube_mesh);
+		// let cube_mesh = cube(1.0);
+		// let cube_mesh_id = state.meshes.insert(cube_mesh);
 		
 
-		// Generate cubes in random locations
-		for i in 0..10 {
-			let rand_x = self.rng.gen_range(-size / 2.0..size / 2.0);
-			let rand_z = self.rng.gen_range(-size / 2.0..size / 2.0);
+		// // Generate cubes in random locations
+		// for i in 0..10 {
+		// 	let rand_x = self.rng.gen_range(-size / 2.0..size / 2.0);
+		// 	let rand_z = self.rng.gen_range(-size / 2.0..size / 2.0);
 
-			let mut cube = Node::new();
-			cube.mesh = Some(cube_mesh_id);
-			cube.translation = Vec3::new(
-				rand_x,
-				10.0,
-				rand_z,
-			);
-			cube.scale = Vec3::new(2.0, 2.0, 2.0);
-			cube.collision_shape = Some(CollisionShape::Box { size: Vec3::new(2.0, 2.0, 2.0) });
-			cube.physics.typ = PhycisObjectType::Dynamic;
-			cube.physics.mass = 1.0;
-			cube.parent = NodeParent::Scene(main_scene_id);
-			let cube_id = state.nodes.insert(cube);
-		}
+		// 	let mut cube = Node::new();
+		// 	cube.mesh = Some(cube_mesh_id);
+		// 	cube.translation = Vec3::new(
+		// 		rand_x,
+		// 		10.0,
+		// 		rand_z,
+		// 	);
+		// 	cube.scale = Vec3::new(2.0, 2.0, 2.0);
+		// 	cube.collision_shape = Some(CollisionShape::Box { size: Vec3::new(2.0, 2.0, 2.0) });
+		// 	cube.physics.typ = PhycisObjectType::Dynamic;
+		// 	cube.physics.mass = 1.0;
+		// 	cube.parent = NodeParent::Scene(main_scene_id);
+		// 	let cube_id = state.nodes.insert(cube);
+		// }
 
 		let ui = stack(&[
 			camera_view(camera_id),
@@ -453,13 +372,6 @@ impl pge::App for WizardWars {
 			]).height(0.1).anchor_bottom()
 		]);
 		let gui_id = state.guis.insert(ui);
-
-		let window = Window::new()
-			.title("Wizard Wars")
-			.ui(gui_id)
-			.lock_cursor(true);
-
-		state.windows.insert(window);
 	}
 
 	fn on_keyboard_input(&mut self, key: KeyboardKey, action: KeyAction, state: &mut State) {

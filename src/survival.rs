@@ -2,36 +2,75 @@ use std::time::Instant;
 
 use pge::*;
 
+use crate::controller::PlayerController;
 use crate::dark_dungeon::DarkDungeon;
-use crate::mobs::spawn_mob;
+// use crate::mobs::spawn_mob;
+use crate::mobs::MobSpawner;
 use crate::npc::Npc;
 use crate::player::Player;
 use crate::player::PlayerBuilder;
 use crate::types::SurvivalMap;
-use crate::utility::PressedKeys;
+use crate::utility::MoveDirection;
 
 pub struct Survival {
 	player: Player,
+	main_scene_id: ArenaId<Scene>,
 	wave: u32,
-	pressed_keys: PressedKeys,
 	enemies: Vec<Npc>,
 	max_enemies: u32,
 	enemies_spawned: u32,
 	since_last_spawn: Instant,
-	map: Box<dyn SurvivalMap>
+	map: Box<dyn SurvivalMap>,
+	spawner: MobSpawner
 }
 
 impl Survival {
-	pub fn new(state: &mut State) -> Self {
+	pub fn new(state: &mut State, window_id: ArenaId<Window>) -> Self {
+		let main_scene = Scene::new();
+		let main_scene_id = state.scenes.insert(main_scene);
+		let map = DarkDungeon::create(state, main_scene_id);
+		let mut player = PlayerBuilder::new(main_scene_id)
+			.mass(150.0)
+			.build(state);
+
+		let mut camera = pge::Camera::new();
+		camera.zfar = 1000.0;
+		camera.node_id = Some(player.node_id);
+		let camera_id = state.cameras.insert(camera);
+
+		let ui = stack(&[
+			camera_view(camera_id),
+			row(&[
+				rect().background_color(Color::BLUE),
+				rect().background_color(Color::RED),
+				rect().background_color(Color::CYAN),
+				rect().background_color(Color::WHITE)
+			]).height(0.1).anchor_bottom()
+		]);
+		let ui_id = state.guis.insert(ui);
+		
+		let window = state.windows.get_mut(&window_id).unwrap();
+		window.ui = Some(ui_id);
+
+		// let window = Window::new()
+		// 	.title("Wizard Wars")
+		// 	.ui(gui_id)
+		// 	.lock_cursor(true);
+
+		// state.windows.insert(window);
+
+		let spawner = MobSpawner::new(state, main_scene_id);
+
 		Self {
 			wave: 0,
-			player: PlayerBuilder::new().build(state),
-			pressed_keys: PressedKeys::new(),
+			player,
+			main_scene_id,
 			enemies: Vec::new(),
 			max_enemies: 10,
 			enemies_spawned: 0,
 			since_last_spawn: Instant::now(),
-			map: Box::new(DarkDungeon {})
+			map: Box::new(map),
+			spawner
 		}
 	}
 
@@ -44,7 +83,13 @@ impl Survival {
 
 	pub fn on_mouse_input(&mut self, event: MouseEvent, state: &mut State) {
 		match event {
-			MouseEvent::Moved { dx, dy } => self.player.rotate(dx, dy),
+			MouseEvent::Moved { dx, dy } => {
+				let node = state.nodes.get_mut(&self.player.node_id).unwrap();
+				let (a, b, c) = node.rotation.to_euler(EulerRot::YXZ);
+				let yaw = a + dx * 0.002;
+				let pitch = b + dy * 0.002;
+				node.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+			},
 			MouseEvent::Pressed { button } => {
 				match button {
 					MouseButton::Left => self.player.start_primary_action(state),
@@ -69,12 +114,12 @@ impl Survival {
 		match action {
 			KeyAction::Pressed => {
 				match key {
-					KeyboardKey::W => self.pressed_keys.forward = true,
-					KeyboardKey::S => self.pressed_keys.backward = true,
-					KeyboardKey::A => self.pressed_keys.left = true,
-					KeyboardKey::D => self.pressed_keys.right = true,
+					KeyboardKey::W => self.player.movdir.forward = true,
+					KeyboardKey::S => self.player.movdir.backward = true,
+					KeyboardKey::A => self.player.movdir.left = true,
+					KeyboardKey::D => self.player.movdir.right = true,
 					KeyboardKey::ShiftLeft => self.player.start_sprinting(state),
-					KeyboardKey::Space => self.player.jumping = true,
+					KeyboardKey::Space => self.player.jump(state),
 					KeyboardKey::G => self.player.drop(state),
 					KeyboardKey::F => self.player.start_grap(state),
 					KeyboardKey::Digit1 => self.player.equip(0, state),
@@ -88,10 +133,10 @@ impl Survival {
 			},
 			KeyAction::Released => {
 				match key {
-					KeyboardKey::W => self.pressed_keys.forward = false,
-					KeyboardKey::S => self.pressed_keys.backward = false,
-					KeyboardKey::A => self.pressed_keys.left = false,
-					KeyboardKey::D => self.pressed_keys.right = false,
+					KeyboardKey::W => self.player.movdir.forward = false,
+					KeyboardKey::S => self.player.movdir.backward = false,
+					KeyboardKey::A => self.player.movdir.left = false,
+					KeyboardKey::D => self.player.movdir.right = false,
 					KeyboardKey::ShiftLeft => self.player.stop_sprinting(state),
 					KeyboardKey::Space => self.player.jumping = false,
 					KeyboardKey::F => self.player.stop_grap(state),
@@ -99,13 +144,15 @@ impl Survival {
 				}
 			},
 		};
+
+		log::info!("Pressed keys: {:?}", self.player.movdir);
 	}
 
 	pub fn on_process(&mut self, state: &mut State, delta: f32) {
 		self.player.process(state);
 		let mut all_enemies_dead = true;
 		for enemy in &mut self.enemies {
-			enemy.process(state);
+			enemy.process(state, &self.player);
 			if !enemy.player.death {
 				all_enemies_dead = false;
 			}
@@ -118,7 +165,8 @@ impl Survival {
 		if self.enemies_spawned < self.max_enemies {
 			let time_since_last_spawn = self.since_last_spawn.elapsed().as_secs_f32();
 			if time_since_last_spawn > 2.0 {
-				self.enemies.push(spawn_mob(state, self.map.get_mob_spawn_point()));
+				log::info!("spawn new mob");
+				self.enemies.push(self.spawner.spawn(state, self.map.get_mob_spawn_point()));
 				self.enemies_spawned += 1;
 				self.since_last_spawn = Instant::now();
 			}

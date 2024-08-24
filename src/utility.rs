@@ -16,14 +16,14 @@ pub fn load_model(path: &str, state: &mut pge::State) -> ArenaId<Node> {
 }
 
 #[derive(Debug, Clone)]
-pub struct PressedKeys {
+pub struct MoveDirection {
 	pub forward: bool,
 	pub backward: bool,
 	pub left: bool,
 	pub right: bool,
 }
 
-impl PressedKeys {
+impl MoveDirection {
 	pub fn new() -> Self {
 		Self {
 			forward: false,
@@ -56,7 +56,7 @@ impl PressedKeys {
         direction
     }
 
-	pub fn any_pressed(&self) -> bool {
+	pub fn is_moving(&self) -> bool {
 		self.forward || self.backward || self.left || self.right
 	}
 }

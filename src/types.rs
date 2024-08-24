@@ -14,7 +14,7 @@ pub trait Item {
 }
 
 pub trait SurvivalMap {
-	fn get_mob_spawn_point(&self) -> Vec3;
-	fn get_player_spawn_point(&self) -> Vec3;
+	fn get_mob_spawn_point(&mut self) -> Vec3;
+	fn get_player_spawn_point(&mut self) -> Vec3;
 	fn process(&mut self, state: &mut State);
 }
