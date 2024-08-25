@@ -2,88 +2,88 @@ use pge::*;
 use crate::inventory::Inventory;
 use crate::utility::MoveDirection;
 
-pub struct PlayerBuilder {
-	scene_id: ArenaId<Scene>,
-	inventory_size: usize,
-	team: u32,
-	mana: u32,
-	health: u32,
-	mass: f32,
-	translation: Vec3,
-}
+// pub struct PlayerBuilder {
+// 	scene_id: ArenaId<Scene>,
+// 	inventory_size: usize,
+// 	team: u32,
+// 	mana: u32,
+// 	health: u32,
+// 	mass: f32,
+// 	translation: Vec3,
+// }
 
-impl PlayerBuilder {
-	pub fn new(scene_id: ArenaId<Scene>) -> Self {
-		Self {
-			scene_id,
-			inventory_size: 10,
-			team: 0,
-			mana: 100,
-			health: 100,
-			mass: 45.0,
-			translation: Vec3::ZERO,
-		}
-	}
+// impl PlayerBuilder {
+// 	pub fn new(<scene_id>: ArenaId<Scene>) -> Self {
+// 		Self {
+// 			scene_id,
+// 			inventory_size: 10,
+// 			team: 0,
+// 			mana: 100,
+// 			health: 100,
+// 			mass: 45.0,
+// 			translation: Vec3::ZERO,
+// 		}
+// 	}
 
-	pub fn team(mut self, team: u32) -> Self {
-		self.team = team;
-		self
-	}
+// 	pub fn team(mut self, team: u32) -> Self {
+// 		self.team = team;
+// 		self
+// 	}
 
-	pub fn inventory_size(mut self, size: usize) -> Self {
-		self.inventory_size = size;
-		self
-	}
+// 	pub fn inventory_size(mut self, size: usize) -> Self {
+// 		self.inventory_size = size;
+// 		self
+// 	}
 
-	pub fn mana(mut self, mana: u32) -> Self {
-		self.mana = mana;
-		self
-	}
+// 	pub fn mana(mut self, mana: u32) -> Self {
+// 		self.mana = mana;
+// 		self
+// 	}
 
-	pub fn health(mut self, health: u32) -> Self {
-		self.health = health;
-		self
-	}
+// 	pub fn health(mut self, health: u32) -> Self {
+// 		self.health = health;
+// 		self
+// 	}
 
-	pub fn mass(mut self, mass: f32) -> Self {
-		self.mass = mass;
-		self
-	}
+// 	pub fn mass(mut self, mass: f32) -> Self {
+// 		self.mass = mass;
+// 		self
+// 	}
 
-	pub fn translation(mut self, translation: Vec3) -> Self {
-		self.translation = translation;
-		self
-	}
+// 	pub fn translation(mut self, translation: Vec3) -> Self {
+// 		self.translation = translation;
+// 		self
+// 	}
 
-	pub fn build(self, state: &mut State) -> Player {
-		let mut node = Node::new();
-		node.physics.typ = PhycisObjectType::Dynamic;
-		node.physics.mass = self.mass;
-		node.collision_shape = Some(CollisionShape::Capsule {
-			radius: 0.5,
-			height: 1.8
-		});
-		node.translation = self.translation;
-		node.parent = NodeParent::Scene(self.scene_id);
-		let node_id = state.nodes.insert(node);
+// 	pub fn build(self, state: &mut State) -> Player {
+// 		let mut node = Node::new();
+// 		node.physics.typ = PhycisObjectType::Dynamic;
+// 		node.physics.mass = self.mass;
+// 		node.collision_shape = Some(CollisionShape::Capsule {
+// 			radius: 0.5,
+// 			height: 1.8
+// 		});
+// 		node.translation = self.translation;
+// 		node.parent = NodeParent::Scene(self.scene_id);
+// 		let node_id = state.nodes.insert(node);
 
-		Player {
-			node_id,
-			crouching: false,
-			inventory: Inventory::new(self.inventory_size),
-			spriting: false,
-			jumping: false,
-			prone: false,
-			mana: 100,
-			team: self.team,
-			death: false,
-			// yaw: 0.0,
-			// pitch: 0.0,
-			movdir: MoveDirection::new(),
-			movement_force: 1600.0,
-		}
-	}
-}
+// 		Player {
+// 			node_id,
+// 			crouching: false,
+// 			inventory: Inventory::new(self.inventory_size),
+// 			spriting: false,
+// 			jumping: false,
+// 			prone: false,
+// 			mana: 100,
+// 			team: self.team,
+// 			death: false,
+// 			// yaw: 0.0,
+// 			// pitch: 0.0,
+// 			movdir: MoveDirection::new(),
+// 			movement_force: 1600.0,
+// 		}
+// 	}
+// }
 
 pub struct Player {
 	pub node_id: ArenaId<Node>,
@@ -102,6 +102,22 @@ pub struct Player {
 }
 
 impl Player {
+	pub fn new(node_id: ArenaId<Node>, inventory: Inventory) -> Self {
+		Self {
+			node_id,
+			mana: 100,
+			inventory,
+			spriting: false,
+			jumping: false,
+			crouching: false,
+			prone: false,
+			team: 0,
+			death: false,
+			movdir: MoveDirection::new(),
+			movement_force: 1600.0,
+		}
+	}
+
 	// pub fn spawn(state: &mut State) -> Self {
 	// 	let node = Node::new();
 	// 	let node_id = state.nodes.insert(node);
@@ -118,7 +134,9 @@ impl Player {
 	// 	}
 	// }
 
-	pub fn process(&mut self, state: &mut State) {
+	pub fn process(&mut self, state: &mut State, dt: f32) {
+		self.inventory.process(state, dt);
+
 		let node = state.nodes.get_mut(&self.node_id).unwrap();
 		// node.rotation = Quat::from_euler(EulerRot::YXZ, self.yaw, self.pitch, 0.0);
 
@@ -147,11 +165,16 @@ impl Player {
 
 			node.physics.force = force;
 			//log::info!("force: {:?}", node.physics.force);
-		} else {
+		} 
+		
+		else {
 			// We calculate force opposite of momevement to slow down the player
-			let force = -node.physics.velocity.xz() * self.movement_force;
-			node.physics.force = Vec3::new(force.x, 0.0, force.y);
+			// let force = -node.physics.velocity.xz() * self.movement_force;
+			// node.physics.force = Vec3::new(force.x, 0.0, force.y);
 			//player.physics.force = glam::Vec3::ZERO;
+
+			let force = -node.physics.velocity;
+			node.physics.force = Vec3::new(force.x, 0.0, force.z);
 		}
 
 		if self.spriting {

@@ -11,6 +11,7 @@ pub trait Item {
 	fn stop_secondary_action(&mut self, state: &mut State) {}
 	fn start_third_action(&mut self, state: &mut State) {}
 	fn stop_third_action(&mut self, state: &mut State) {}
+	fn process(&mut self, state: &mut State, dt: f32) {}
 }
 
 pub trait SurvivalMap {

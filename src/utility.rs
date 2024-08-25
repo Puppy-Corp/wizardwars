@@ -15,6 +15,25 @@ pub fn load_model(path: &str, state: &mut pge::State) -> ArenaId<Node> {
 	node_id
 }
 
+pub fn get_root_node(state: &State, node_id: ArenaId<Node>) -> ArenaId<Node> {
+	let mut stack = vec![node_id];
+	while let Some(node_id) = stack.pop() {
+		match state.nodes.get(&node_id) {
+			Some(node) => {
+				match node.parent {
+						NodeParent::Node(n) => stack.push(n),
+						NodeParent::Scene(_) => return node_id,
+						NodeParent::Orphan => return node_id,
+					}
+			},
+			None => {
+				return node_id;
+			},
+		};
+	};
+	node_id
+}
+
 #[derive(Debug, Clone)]
 pub struct MoveDirection {
 	pub forward: bool,

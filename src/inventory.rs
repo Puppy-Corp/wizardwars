@@ -1,17 +1,6 @@
 use pge::ArenaId;
 use pge::Node;
-
 use crate::types::Item;
-
-
-// pub trait InvetoryItem {
-// 	fn prepare(&mut self, state: &mut pge::State) {}
-// 	fn activate(&mut self, state: &mut pge::State, parent_id: ArenaId<Node>) {}
-// 	fn deactivate(&mut self, state: &mut pge::State) {}
-// 	fn start_using(&mut self, state: &mut pge::State) {}
-// 	fn stop_using(&mut self, state: &mut pge::State) {}
-// 	fn process(&mut self, state: &mut pge::State) {}
-// }
 
 pub struct Inventory {
 	active: Option<usize>,
@@ -63,4 +52,11 @@ impl Inventory{
 			None => None,
 		}
 	}
+
+	pub fn process(&mut self, state: &mut pge::State, dt: f32) {
+		for item in &mut self.items {
+			item.process(state, dt);
+		}
+	}
 }
+

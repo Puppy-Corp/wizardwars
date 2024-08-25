@@ -1,16 +1,13 @@
 use std::time::Instant;
-
 use pge::*;
-
-use crate::controller::PlayerController;
+use crate::ak47::AK47;
 use crate::dark_dungeon::DarkDungeon;
+use crate::inventory::Inventory;
 // use crate::mobs::spawn_mob;
 use crate::mobs::MobSpawner;
 use crate::npc::Npc;
 use crate::player::Player;
-use crate::player::PlayerBuilder;
 use crate::types::SurvivalMap;
-use crate::utility::MoveDirection;
 
 pub struct Survival {
 	player: Player,
@@ -29,13 +26,21 @@ impl Survival {
 		let main_scene = Scene::new();
 		let main_scene_id = state.scenes.insert(main_scene);
 		let map = DarkDungeon::create(state, main_scene_id);
-		let mut player = PlayerBuilder::new(main_scene_id)
-			.mass(150.0)
-			.build(state);
+
+		let mut player_node = Node::new();
+		player_node.parent = NodeParent::Scene(main_scene_id);
+		player_node.physics.mass = 100.0;
+		player_node.physics.typ = PhycisObjectType::Dynamic;
+		player_node.collision_shape = Some(CollisionShape::Box { size: Vec3::new(0.5, 1.8, 0.5) });
+		player_node.translation = Vec3::new(0.0, 1.0, 0.0);
+		let player_node_id = state.nodes.insert(player_node);
+		let inventory = Inventory::new(4);
+		let mut player = Player::new(player_node_id, inventory);
+		player.inventory.add_item(AK47::new(state, main_scene_id));
 
 		let mut camera = pge::Camera::new();
 		camera.zfar = 1000.0;
-		camera.node_id = Some(player.node_id);
+		camera.node_id = Some(player_node_id);
 		let camera_id = state.cameras.insert(camera);
 
 		let ui = stack(&[
@@ -148,11 +153,11 @@ impl Survival {
 		log::info!("Pressed keys: {:?}", self.player.movdir);
 	}
 
-	pub fn on_process(&mut self, state: &mut State, delta: f32) {
-		self.player.process(state);
+	pub fn on_process(&mut self, state: &mut State, dt: f32) {
+		self.player.process(state, dt);
 		let mut all_enemies_dead = true;
 		for enemy in &mut self.enemies {
-			enemy.process(state, &self.player);
+			enemy.process(state, &self.player, dt);
 			if !enemy.player.death {
 				all_enemies_dead = false;
 			}
