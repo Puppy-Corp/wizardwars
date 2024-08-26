@@ -69,7 +69,11 @@ impl Item for AK47 {
 			self.since_last_shot = 0.0;
 			log::info!("shoot");
 			let root_node_id = get_root_node(&state, self.node_id);
-			let root_node = state.nodes.get(&root_node_id).unwrap();
+			let root_node = state.nodes.get_mut(&root_node_id).unwrap();
+			let (a, mut b, c) = root_node.rotation.to_euler(EulerRot::YXZ);
+			b += -2.0_f32.to_radians();
+			let new_rotation = Quat::from_euler(EulerRot::YXZ, a, b, c);
+			root_node.rotation = new_rotation;
 			let mut bullet_node = Node::new();
 			bullet_node.mesh = Some(self.bullet_mesh_id);
 			bullet_node.parent = NodeParent::Scene(self.scene_id);
