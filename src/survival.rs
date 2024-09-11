@@ -3,6 +3,7 @@ use pge::*;
 use crate::ak47::AK47;
 use crate::dark_dungeon::DarkDungeon;
 use crate::inventory::Inventory;
+use crate::katana::Katana;
 // use crate::mobs::spawn_mob;
 use crate::mobs::MobSpawner;
 use crate::npc::Npc;
@@ -37,6 +38,7 @@ impl Survival {
 		let inventory = Inventory::new(4);
 		let mut player = Player::new(player_node_id, inventory);
 		player.inventory.add_item(AK47::new(state, main_scene_id));
+		player.inventory.add_item(Katana::new(state, main_scene_id));
 
 		let mut camera = pge::Camera::new();
 		camera.zfar = 1000.0;
@@ -52,17 +54,9 @@ impl Survival {
 				rect().background_color(Color::WHITE)
 			]).height(0.1).anchor_bottom()
 		]);
-		let ui_id = state.guis.insert(ui);
-		
+		let ui_id = state.ui_elements.insert(ui);	
 		let window = state.windows.get_mut(&window_id).unwrap();
 		window.ui = Some(ui_id);
-
-		// let window = Window::new()
-		// 	.title("Wizard Wars")
-		// 	.ui(gui_id)
-		// 	.lock_cursor(true);
-
-		// state.windows.insert(window);
 
 		let spawner = MobSpawner::new(state, main_scene_id);
 
@@ -94,6 +88,7 @@ impl Survival {
 				let yaw = a + dx * 0.002;
 				let pitch = b + dy * 0.002;
 				node.rotation = Quat::from_euler(EulerRot::YXZ, yaw, pitch, 0.0);
+				self.player.on_mouse_moved(dx, dy, state);
 			},
 			MouseEvent::Pressed { button } => {
 				match button {

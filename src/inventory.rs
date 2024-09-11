@@ -53,6 +53,12 @@ impl Inventory{
 		}
 	}
 
+	pub fn on_mouse_moved(&mut self, dx: f32, dy: f32, state: &mut pge::State) {
+		if let Some(active) = self.active {
+			self.items[active].on_mouse_moved(dx, dy, state);
+		}
+	}
+
 	pub fn process(&mut self, state: &mut pge::State, dt: f32) {
 		for item in &mut self.items {
 			item.process(state, dt);

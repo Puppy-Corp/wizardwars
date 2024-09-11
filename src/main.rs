@@ -371,7 +371,7 @@ impl pge::App for WizardWars {
 				rect().background_color(Color::WHITE)
 			]).height(0.1).anchor_bottom()
 		]);
-		let gui_id = state.guis.insert(ui);
+		let gui_id = state.ui_elements.insert(ui);
 	}
 
 	fn on_keyboard_input(&mut self, key: KeyboardKey, action: KeyAction, state: &mut State) {

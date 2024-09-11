@@ -17,7 +17,6 @@ impl AK47 {
 	pub fn new(state: &mut State, scene_id: ArenaId<Scene>) -> Self {
 		let cube = cube(0.3);
 		let mesh_id = state.meshes.insert(cube);
-
 		let node_id = load_model("assets/ak47.glb", state);
 		let node = state.nodes.get_mut(&node_id).unwrap();
 		node.translation = Vec3::new(0.3, -1.0, 1.0);

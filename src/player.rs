@@ -134,6 +134,10 @@ impl Player {
 	// 	}
 	// }
 
+	pub fn on_mouse_moved(&mut self, dx: f32, dy: f32, state: &mut State) {
+		self.inventory.on_mouse_moved(dx, dy, state);
+	}
+
 	pub fn process(&mut self, state: &mut State, dt: f32) {
 		self.inventory.process(state, dt);
 

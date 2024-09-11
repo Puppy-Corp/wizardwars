@@ -1,3 +1,4 @@
+use pge::MouseEvent;
 use pge::State;
 use pge::Vec3;
 
@@ -12,6 +13,7 @@ pub trait Item {
 	fn start_third_action(&mut self, state: &mut State) {}
 	fn stop_third_action(&mut self, state: &mut State) {}
 	fn process(&mut self, state: &mut State, dt: f32) {}
+	fn on_mouse_moved(&mut self, dx: f32, dy: f32, state: &mut State) {}
 }
 
 pub trait SurvivalMap {
