@@ -13,14 +13,9 @@ mod dark_dungeon;
 mod controller;
 
 use std::time::Instant;
-use ak47::AK47;
-use inventory::Inventory;
-use katana::Katana;
 use log::LevelFilter;
 use pge::*;
 use player::Player;
-use rand::Rng;
-use simple_logger::SimpleLogger;
 use survival::Survival;
 use utility::MoveDirection;
 
@@ -371,10 +366,10 @@ impl pge::App for WizardWars {
 				rect().background_color(Color::WHITE)
 			]).height(0.1).anchor_bottom()
 		]);
-		let gui_id = state.ui_elements.insert(ui);
+		let gui_id = state.guis.insert(ui);
 	}
 
-	fn on_keyboard_input(&mut self, key: KeyboardKey, action: KeyAction, state: &mut State) {
+	fn on_keyboard_input(&mut self, window_id: ArenaId<Window>, key: KeyboardKey, action: KeyAction, state: &mut State) {
 		match self.game_mode {
 			GameMode::Survival(ref mut survival) => {
 				survival.on_keyboard_input(key, action, state);
@@ -383,7 +378,7 @@ impl pge::App for WizardWars {
 		}
 	}
 
-	fn on_mouse_input(&mut self, event: MouseEvent, state: &mut State) {
+	fn on_mouse_input(&mut self, window_id: ArenaId<Window>, event: MouseEvent, state: &mut State) {
 		match self.game_mode {
 			GameMode::Survival(ref mut survival) => {
 				survival.on_mouse_input(event, state);
@@ -473,8 +468,7 @@ impl pge::App for WizardWars {
 	}
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() {
     let filter_level = match std::env::var("WIZARDWARS_LOG_LEVEL") {
         Ok(lev) => {
             match lev.as_str() {
@@ -489,13 +483,9 @@ async fn main() -> anyhow::Result<()> {
         }
     };
 
-    SimpleLogger::new()
-        .with_level(filter_level)
-        .without_timestamps()
-        .init()
-        .unwrap();
+    pge::init_logging();
 
     // let args = Args::parse();
 
-    Ok(pge::run(WizardWars::new()).await?)
+   	pge::run(WizardWars::new()).unwrap();
 }

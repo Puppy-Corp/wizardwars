@@ -1,14 +1,4 @@
-use pge::plane;
-use pge::ArenaId;
-use pge::CollisionShape;
-use pge::EulerRot;
-use pge::Node;
-use pge::NodeParent;
-use pge::PhycisObjectType;
-use pge::PointLight;
-use pge::Quat;
-use pge::Scene;
-use pge::Texture;
+use pge::*;
 use pge::Vec3;
 use rand::rngs::ThreadRng;
 use rand::thread_rng;
@@ -24,6 +14,14 @@ impl DarkDungeon {
 	pub fn create(state: &mut pge::State, main_scene_id: ArenaId<Scene>) -> Self {
 		let texture = Texture::new("assets/wall_medium.png");
 		let texture_id = state.textures.insert(texture);
+		let wall_material = Material {
+			name: Some("wall_material".to_string()),
+			base_color_texture: Some(texture_id),
+			metallic_factor: 0.0,
+			roughness_factor: 0.0,
+			..Default::default()
+		};
+		let wall_material_id = state.materials.insert(wall_material);
 
 		let size = 200.0;
 
@@ -34,7 +32,7 @@ impl DarkDungeon {
 		// 	[1.0, 1.0],
 		// 	[0.0, 1.0],
 		// ];
-		wall_mesh.texture = Some(texture_id);
+		wall_mesh.primitives[0].material = Some(wall_material_id);
 
 		let mut forward_wall = Node::new();
 		forward_wall.mesh = Some(state.meshes.insert(wall_mesh.clone()));
@@ -86,12 +84,33 @@ impl DarkDungeon {
 		right_wall.parent = NodeParent::Scene(main_scene_id);
 		state.nodes.insert(right_wall);
 
-		let floor_mesh = plane(size, size);
-		let floor_id = state.meshes.insert(floor_mesh);
+		let orange_texture = Texture {
+			name: "orange_texture".to_string(),
+			source: TextureSource::Buffer {
+				data: vec![138, 98, 25, 255],
+				width: 1,
+				height: 1
+			},
+			..Default::default()
+		};
+		let orange_texture_id = state.textures.insert(orange_texture);
+
+		let ground_material = Material {
+			name: Some("ground_material".to_string()),
+			base_color_factor: [1.0, 1.0, 1.0, 1.0],
+			base_color_texture: Some(orange_texture_id),
+			..Default::default()
+		};
+		let ground_material_id = state.materials.insert(ground_material);
+
+		let mut floor_mesh = plane(size, size);
+		floor_mesh.primitives[0].material = Some(ground_material_id);
+		let floor_mesh_id = state.meshes.insert(floor_mesh);
+		
 
 		let mut floor = Node::new();
 		floor.translation = Vec3::new(0.0, -1.0, 0.0);
-		floor.mesh = Some(floor_id);
+		floor.mesh = Some(floor_mesh_id);
 		floor.collision_shape = Some(CollisionShape::Box { size: Vec3::new(size, 1.0, size) });
 		floor.physics.typ = PhycisObjectType::Static;
 		floor.parent = NodeParent::Scene(main_scene_id);

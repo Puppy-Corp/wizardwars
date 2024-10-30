@@ -21,7 +21,8 @@ impl AK47 {
 		let node = state.nodes.get_mut(&node_id).unwrap();
 		node.translation = Vec3::new(0.3, -1.0, 1.0);
 		// rotate 180 degrees
-		node.rotation = Quat::from_euler(EulerRot::YXZ, PI, 0.0, 0.0);
+		node.rotation = Quat::from_euler(EulerRot::YXZ, PI * 1.5, 0.0, 0.0);
+		node.scale = Vec3::new(60.0, 60.0, 60.0);
 
 		Self {
 			node_id,

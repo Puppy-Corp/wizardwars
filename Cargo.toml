@@ -7,9 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-tokio = { version = "1", features = ["full"] }
 log = "0.4"
-simple_logger = "4"
 clap = { version = "4", features = ["derive"] }
-pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "e21079434ecd230e50c2cae4072e8b061db82d6d" }
+pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "5519e3ab0c03d490309c4ab863c86ebe30af1d33", features = ["wgpu_winit"] }
 rand = "0.8"

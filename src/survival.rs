@@ -54,7 +54,7 @@ impl Survival {
 				rect().background_color(Color::WHITE)
 			]).height(0.1).anchor_bottom()
 		]);
-		let ui_id = state.ui_elements.insert(ui);	
+		let ui_id = state.guis.insert(ui);	
 		let window = state.windows.get_mut(&window_id).unwrap();
 		window.ui = Some(ui_id);
 
