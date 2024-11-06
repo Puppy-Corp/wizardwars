@@ -11,6 +11,8 @@ mod npc;
 mod mobs;
 mod dark_dungeon;
 mod controller;
+mod pvp;
+mod generated_pvp_map;
 
 use std::time::Instant;
 use log::LevelFilter;
@@ -21,7 +23,8 @@ use utility::MoveDirection;
 
 enum GameMode {
 	Loading,
-	Survival(Survival)
+	Survival(Survival),
+	PVP
 }
 
 struct Bullet {
@@ -290,6 +293,7 @@ impl pge::App for WizardWars {
 		// let camera_id = state.cameras.insert(camera);
 
 		self.game_mode = GameMode::Survival(Survival::new(state, window_id));
+		// self.game_mode = GameMode::PVP(PVP::new(state, window_id));
 
 		let main_scene = Scene::new();
 		let main_scene_id = state.scenes.insert(main_scene);

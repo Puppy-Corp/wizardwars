@@ -9,5 +9,13 @@ edition = "2021"
 anyhow = "1"
 log = "0.4"
 clap = { version = "4", features = ["derive"] }
-pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "5519e3ab0c03d490309c4ab863c86ebe30af1d33", features = ["wgpu_winit"] }
+pge = { git = "https://github.com/Puppy-Corp/pge.git", rev = "ca68d0a7028edf82486ec5f690a2126c3907d64d", features = ["wgpu_winit"] }
 rand = "0.8"
+
+[lib]
+name = "wizardwars"
+path = "src/lib.rs"
+
+[[bin]]
+name = "view_generated_map"
+# required-features = ["wgpu_winit"]

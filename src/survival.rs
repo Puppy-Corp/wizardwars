@@ -2,6 +2,7 @@ use std::time::Instant;
 use pge::*;
 use crate::ak47::AK47;
 use crate::dark_dungeon::DarkDungeon;
+use crate::generated_pvp_map::GeneratedPVPMap;
 use crate::inventory::Inventory;
 use crate::katana::Katana;
 // use crate::mobs::spawn_mob;
@@ -26,7 +27,8 @@ impl Survival {
 	pub fn new(state: &mut State, window_id: ArenaId<Window>) -> Self {
 		let main_scene = Scene::new();
 		let main_scene_id = state.scenes.insert(main_scene);
-		let map = DarkDungeon::create(state, main_scene_id);
+		let map = GeneratedPVPMap::new(state, main_scene_id, 100.0, 100.0);
+		// let map = DarkDungeon::create(state, main_scene_id);
 
 		let mut player_node = Node::new();
 		player_node.parent = NodeParent::Scene(main_scene_id);

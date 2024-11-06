@@ -87,7 +87,7 @@ impl Item for AK47 {
 			bullet_node.physics.velocity = dir * 100.0;
 			bullet_node.physics.mass = 1.0;
 			bullet_node.physics.typ = PhycisObjectType::Dynamic;
-			bullet_node.collision_shape = Some(CollisionShape::Sphere { radius: 0.1 });
+			bullet_node.collision_shape = Some(CollisionShape::Box { size: Vec3::new(0.1, 0.1, 0.1) });
 			state.nodes.insert(bullet_node);
 
 			// bullet_node.translation = node.translation * 
